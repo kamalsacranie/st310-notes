@@ -1,0 +1,61 @@
+% Importing our necessary packages
+\usepackage{booktabs}
+\usepackage{multicol}
+\usepackage[edges]{forest}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+% Setting our text to not bet justified across the whole page and no hyphen
+\usepackage[document]{ragged2e}
+\usepackage[none]{hyphenat}
+
+% Importing our tikz
+\usetikzlibrary{trees}
+\usetikzlibrary{backgrounds}
+
+% Setting up our hyperlinks
+\hypersetup{colorlinks = true, linkcolor = blue, urlcolor = blue}
+
+% Changing chaper text
+\renewcommand{\chaptername}{Chapter}
+% Chaning padding between footnote line and text
+\addtolength{\skip\footins}{1em}
+% % Change space between bullets
+% \renewcommand{\tightlist}{
+% \setlength{\itemsep}{0.4em}
+% \setlength{\topsep}{1cm}
+% \setlength{\partopsep}{1cm}
+% }
+% Decreasing space before chapter title
+\titleformat{\chapter}[display]{\normalfont\Large\bfseries}{\chaptertitlename\ \thechapter}{0pt}{\huge}
+\titlespacing*{\chapter}{10pt}{0pt}{20pt}
+
+% Making the repositioning of our images more forgiving
+\renewcommand{\topfraction}{.85}
+\renewcommand{\bottomfraction}{.7}
+\renewcommand{\textfraction}{.15}
+\renewcommand{\floatpagefraction}{.66}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{3}
+\setcounter{totalnumber}{4}
+
+% Creating shaded indented box for quote
+\usepackage{xcolor}
+\usepackage[framemethod=TikZ]{mdframed}
+
+\colorlet{shadecolor}{black!5!white}
+\mdfsetup{
+	skipabove=\topskip,
+	skipbelow=\topskip,
+	backgroundcolor=shadecolor,
+	leftmargin=0.5cm,
+	rightmargin=0.5cm,
+	topline=false,
+	rightline=false,
+	bottomline=false,
+	nobreak=true,
+}
+\renewenvironment{quote}{
+	\bigskip\begin{mdframed}\itshape
+		}{
+	\end{mdframed}
+}

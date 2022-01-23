@@ -110,7 +110,46 @@ You can use the `select` function to select/deselect rows from your model:
 subset <- select(my_data, -"name of column")
 ```
 
-## Miscillaneous tips
+## Indexing in `R`
+
+Indexing in `R` is pretty similar to something like `pandas`. If I have a
+dataset I can index it in one of two way. The first:
+
+```{r}
+myplot[5, ]
+myplot[, 5]
+myplot[2, 5]
+myplot[2:4, 5:7]
+myplot[myplot[, 5] == 7, 5]
+```
+
+- Line 1 returns row 5 and all columns
+- Line 2 returns column 5 with all rows
+- Line 3 returns cell from column 5 row 2
+- Line 4 returns the cells in rows 2 to 4 and columns 5 to 7^[Not sure if it's
+  inclusive or not]
+- Line 5 return the rows in column 5 which have a value of 7
+
+> Data indexing in `R` is always [<rows>, <cols>]
+
+The second way is with the `$` operator:
+
+```{r}
+mydata[mydata$year == 2020, ]
+```
+
+- This will return all columns for the rows that contain 2020
+
+### The `tidyverse` way of indexing
+
+This is quite a javascript way of doing things. We use the `filter` function,
+much like you would use it in js
+
+```{r}
+filter(dataset, c(year == 2000, continent == "Asia", ...))
+```
+
+## Miscellaneous tips
 
 ### Viewing your dataset in a spreadsheet-like manner
 
@@ -123,8 +162,11 @@ View(<dataset>)
 You can generate a polynomical using:
 
 ```{r}
-poly()??????
+poly({datacolumn}, {polynomial degree})
 ```
+
+- This will basically plot a standard polynomial for the `x` data values
+  (vector?) that you pass as an arg.
 
 ### Adding cols onto a dataframe
 

@@ -131,7 +131,7 @@ knitr::include_graphics(
 It is extremely easy to evaluate MSE in `R`. You use the `residuals` function
 which takes a `model` object as an argument:
 
-```{r, echo=T}
+```{r}
 c(
   mean(residuals(gm_simple)^2),
   mean(residuals(gm_complex)^2)
@@ -140,7 +140,7 @@ c(
 
 `candy_rankings` models:
 
-```{r, echo=T}
+```{r}
 c(
   mean(residuals(candy_simple)^2),
   mean(residuals(candy_complex)^2)
@@ -149,7 +149,8 @@ c(
 
 - These variables we are passing through are object from a model function like
   `lm`
-- The above results show us that the more complex models have lower MSE. This
-  is mostly true because your function better approximates the data. But this
-  is where the question of overfitting comes into play because if we use that
-  same function on a new set of data, we could get completely wrong results
+- The above results would show us that the more complex models have lower MSE.
+  This is mostly true because your function better approximates the data. But
+  this is where the question of overfitting comes into play because if we use
+  that same function on a new set of data, we could get completely wrong
+  results

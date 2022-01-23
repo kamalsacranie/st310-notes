@@ -5,7 +5,6 @@ bookdown::gitbook:
 bookdown::pdf_book:
   includes:
     in_header: ../latex/preamble.tex
-    # highlight: pygments
   latex_engine: xelatex
   citation_package: natbib
   keep_tex: yes

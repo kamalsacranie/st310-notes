@@ -1,0 +1,27 @@
+/* =============Predefined CSS================= */
+
+p.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+}
+pre code {
+  white-space: inherit;
+}
+
+pre.numberSource code > span > a:first-child::before {
+  left: -0.1em;
+}
+
+/* This is for sizing our images correctly in the browser*/
+img {
+    width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+}
