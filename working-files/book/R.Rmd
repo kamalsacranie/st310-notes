@@ -1,0 +1,146 @@
+# `R` notes^[These are probably temporary and will go into own book]
+
+> This is the more general stuff that isn't categorisable into the lecture
+> work. For specific `R` functions just look at the coursework in the root
+> directory of the course
+
+## Using the `R` repl
+
+To use the `R` repl, you just
+
+```{bash}
+R
+```
+
+type `R` on the command line. This launches the `R` repl and you can write any
+code you want. I.e. when you want to install a package, you can use the repl
+
+## Managing packages
+
+To install a package in `R`, you use the install object:
+
+```{r}
+install.packages({
+  package:string
+})
+
+# For example installing renv for virtual environments
+install.packages("renv")
+```
+
+- You pass the name of your package as the argument as a string
+
+## `R` virtual environments
+
+You don't want global packages everywhere, some of them will only be useful for
+particular projects. Queue `renv`, the `R` virtual environment manager.
+
+To create a virtualenv, go into the root of your project directory and run
+
+```{r create-venv}
+renv::init()
+```
+
+to initialise your virtual environment.
+
+- You should create your `.gitignore .Rbuildignore`, and `.Rprofile` files
+  before running this because it auto updates them
+
+You can then install packages as usual and once you have completed your
+project, you can use `renv::snapshow()` to write the dependencies to the
+`renv.lcok` file.^[Note that this only writes the libraries you call in your
+code. So without a project, you will not have any dependencies]
+
+### LSP in virtual environments
+
+Just spent ages trying to figure out why my LSP wasn't picking up my
+virtualenv. It was because the `R` package `languageserver` must be installed
+in the virtualenv in order for neovim to find the script to execute.
+
+LSP has:
+
+- Formatting
+- Completion
+
+## Loading with the library command
+
+Note: in \@ref(r-virtual-environments) we preface the `init()` command with `renv::` denoting that we want
+to use the `init()` command from that specific package. If we were running a
+command constantly, we could use:
+
+```{r}
+library(renv)
+init()
+```
+
+to **bring all the function from the `renv` package into our environment's
+scope**.
+
+## Environemnt variables
+
+You can get and set environemnt variables with:
+
+```{r}
+Sys.getenv()
+Sys.setenv()
+```
+
+To remove an envrionement variable you can use:
+
+```{r}
+Sys.unsetenv()
+```
+
+## Viewing `R` documentation
+
+In `R`, if you want any documentation, you just need to preface the command
+with a question mark:
+
+```{r}
+?install
+```
+
+- Note that we don't call the function when we ask for help
+
+## The `select` function
+
+You can use the `select` function to select/deselect rows from your model:
+
+```{r}
+subset <- select(my_data, -"name of column")
+```
+
+## Miscillaneous tips
+
+### Viewing your dataset in a spreadsheet-like manner
+
+```{r}
+View(<dataset>)
+```
+
+### Generating a polynomial
+
+You can generate a polynomical using:
+
+```{r}
+poly()??????
+```
+
+### Adding cols onto a dataframe
+
+You can use `augment` to add columns onto a dataframe
+
+```{r}
+augment(my_df, newdata = newdf)
+```
+
+### Including all variables in your model
+
+The shorthand to inlcude all the variables in your dataset in your model is:
+
+```{r}
+lm(y ~ ., data = my_data)
+```
+
+What you need to avoid here though is using a variable which is unique to every
+piece of data, like brand, etc.

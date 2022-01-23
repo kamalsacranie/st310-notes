@@ -1,0 +1,155 @@
+# Machine learning applications
+
+Some examples of machine learning are:
+
+- Scraping social-media to predict period of unrest before it happens
+- Using health records to predict which patients will require more care
+- Algorithms which collect data to adapt
+
+Basically any predictive model that uses data to predict the future. In this
+course we focus on the underlying theory of how the methods function.
+
+> The difference between AI and ML, is that AI allows us to get mathematical
+> relationships from data that is unstructure, non-mathematical. This could be
+> images etc. Contrasting this with what we did in section
+> \@ref(simple-plotting-with-ggplot) where our inputs were very mathematical
+> and numerical. In this course **when we refer to data, we are already talking
+> about vectorised, structured data**
+
+## Abstraction and notation
+
+In an abstract sense, the data we look at is formatted as a collection of $p$
+district **variables**^[Think columns of your data]:
+
+\begin{align*}
+  X = (X_1, X_2, \ldots, X_p) \in \mathbb{R^{p}}
+\end{align*}
+
+- We assume each **observation is a point in the vectors space**
+  $\mathbb{R^{p}}$
+- We also assume that $p$ is finite
+
+**Supervised learning**: if we think of an application for ML which has a clear
+$Y$ variable defined, i.e. the outcomes^[Sometimes called responsive] of the
+model, the we are dealing with supervised learning.
+
+**Unsupervised learning**: if there is no natural outcome variable $Y$, then we
+are dealing with unsupervised learning. This is where you try and create a
+mathematical relationship out of unstructured data.
+
+### Sub categories of supervised ML
+
+Common cases:
+
+- If $Y$ is numeric: **regression**
+- If $Y$ is categorical: **classification**
+
+Special cases:
+
+- $Y$ is binary with rare cases, e.g. anomaly detection
+- $Y$ is a time to event, survival analysis
+- Multi-class, hierarchical classes, etc
+
+## How to predict $Y$ from $X$
+
+- We want to estimate $\exists f$ such that the graph of the function $y =
+  f(x)$ fit the data perfectly^[Fundamental idea of regression]
+- **Problem**: what if $(x_1, y_1) = (1, 0)$ and $(x_2, y_2) = (1, 1)$?
+- **Problem**: even our most tested and verified physical laws won't fit data
+  perfectly
+
+Even if we are thinking about cases where our data is supposed to follow a
+well-defined law, upon measuring we will often see that this doesn't quite
+work.  
+The **solution** to this problem is to have an error term. For any function
+$f$, we can always get the residuals:
+
+\begin{align*}
+  \epsilon\equiv y - f(x)
+\end{align*}
+
+- $y$ is the actual observation and we deduct the predicted value to see our
+  residual (error)
+
+***We want a function which minimises error.***
+
+The simplest way to minimise this error is to find out which function decreases
+our squared error^[This is premised on the fact that $\epsilon$ has some sort
+of probability distribution so we can predict it]. A good function is defined
+as:
+
+\begin{align*}
+  \mathbb{E}[\epsilon^2] = \mathbb{E}\{[Y - f(X)]^2\}
+\end{align*}
+
+This motivates the **plug-in principle**: compute an *estimate* $\hat{f}$ of
+the good function $f$ by solving the corresponding problem on the dataset,
+i.e.:
+
+\begin{align*}
+  \min\sum_{i = 1}^{n}\left[y_{i} - \hat{f}(s_{i})\right]^{2}
+\end{align*}
+
+> Basically, there is this perfect function out there $f$. It is almost
+> impossible to arrive at that function so we have to calculate $\hat{f}$ which
+> minimises our error and approximates our perfect function.
+
+## Bias-variance trade-off
+
+Errors that are systematic are bias in the system. The bias-variance trade-off
+is formally described as follows:
+
+\begin{equation}
+  \mathbb{E}\{[Y - \hat{f}(X)]^{2}\} = \text{Var}(\hat{f}) +
+  \text{Bias}(\hat{f})^{2} (\#eq:bias-var-to)
+\end{equation}
+
+- The expected error of our function is a combination of bias and variance
+
+Combining this idea of BV trad-off with our idea of model complexity, we
+typically see that **more complex models have lower bias and higher variance**.
+
+Typical there is a sweet spot for complexity
+
+Figure \@ref(fig:complexity-variance) shows us a great preview between a more
+complex model which visually even has more variance and a less complex model
+which doesn't deviate too much but as such has more bias.
+
+```{r copmplexity-variance, echo=FALSE, fig.cap='copmplexity-variance', out.height="30%", fig.align="center"}
+knitr::include_graphics(
+  c(
+    "./assets/03-machine-learning-applications/img/2022-01-23-02-58-55.png",
+    "./assets/03-machine-learning-applications/img/2022-01-23-02-59-17.png"
+  )
+)
+```
+
+- It is difficult to tell visually which model is better
+
+## Evaluation: mean squared error
+
+It is extremely easy to evaluate MSE in `R`. You use the `residuals` function
+which takes a `model` object as an argument:
+
+```{r, echo=T}
+c(
+  mean(residuals(gm_simple)^2),
+  mean(residuals(gm_complex)^2)
+)
+```
+
+`candy_rankings` models:
+
+```{r, echo=T}
+c(
+  mean(residuals(candy_simple)^2),
+  mean(residuals(candy_complex)^2)
+)
+```
+
+- These variables we are passing through are object from a model function like
+  `lm`
+- The above results show us that the more complex models have lower MSE. This
+  is mostly true because your function better approximates the data. But this
+  is where the question of overfitting comes into play because if we use that
+  same function on a new set of data, we could get completely wrong results
