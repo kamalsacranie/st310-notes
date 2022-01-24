@@ -1,9 +1,12 @@
 % Importing our necessary packages
 \usepackage{booktabs}
+% Footnotes fixed to bottom
+\usepackage[bottom]{footmisc}
 \usepackage{multicol}
 \usepackage[edges]{forest}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
+\usepackage{cancel}
 % Setting our text to not bet justified across the whole page and no hyphen
 \usepackage[document]{ragged2e}
 \usepackage[none]{hyphenat}
@@ -11,6 +14,12 @@
 % Importing our tikz
 \usetikzlibrary{trees}
 \usetikzlibrary{backgrounds}
+
+% Setting our mono code to use fira code
+\usepackage{fontspec}
+\setmonofont[
+	Contextuals={Alternate}
+]{Hasklug Nerd Font Mono}
 
 % Setting up our hyperlinks
 \hypersetup{colorlinks = true, linkcolor = blue, urlcolor = blue}
@@ -42,20 +51,63 @@
 \usepackage{xcolor}
 \usepackage[framemethod=TikZ]{mdframed}
 
-\colorlet{shadecolor}{black!5!white}
-\mdfsetup{
-	skipabove=\topskip,
-	skipbelow=\topskip,
-	backgroundcolor=shadecolor,
-	leftmargin=0.5cm,
-	rightmargin=0.5cm,
-	topline=false,
-	rightline=false,
-	bottomline=false,
-	nobreak=true,
-}
+\colorlet{quoteshadecolor}{yellow!10!white}
 \renewenvironment{quote}{
-	\bigskip\begin{mdframed}\itshape
+	\bigskip\begin{mdframed}[
+			skipabove=\topskip,
+			skipbelow=\topskip,
+			backgroundcolor=quoteshadecolor,
+			leftmargin=0.5cm,
+			rightmargin=0.5cm,
+			topline=false,
+			rightline=false,
+			bottomline=false,
+			nobreak=true,
+		]\itshape%itemshape is for italics
 		}{
 	\end{mdframed}
 }
+
+
+% Changing the background color of our code blocks
+% \colorlet{shadecolor}{magenta!20!white}
+% \definecolor{code}{RGB}{178,178,178}
+% Defining our shadecolor (used fo shading code blocks usually)
+\definecolor{code}{RGB}{1,22,80} % This is how you define a color in latex
+\colorlet{shadecolor}{code} % redefining our shadecolor to be code color
+% Using tcolorbox to make a background box
+\usepackage[many]{tcolorbox}
+\tcbset{enhanced,colback=red!5!white,
+	colframe=red!75!black,fonttitle=\bfseries}
+% Renewing the shaded environemnt with new mdframed box
+\renewenvironment{Shaded}{
+	\bigskip
+	\begin{tcolorbox}[drop fuzzy midday shadow]
+		\begin{mdframed}[
+				skipabove=\topskip*2,
+				outerlinewidth= 0,
+				linewidth=0pt,
+				roundcorner= 3pt,
+				backgroundcolor= shadecolor,
+				outerlinecolor= shadecolor,
+				innertopmargin= \topskip,
+				innerbottommargin=\topskip,
+				leftmargin=-0.8cm,
+				rightmargin=-0.8cm
+			]}{
+		\end{mdframed}
+	\end{tcolorbox}
+	\smallskip
+}
+
+% fancyhdr for header and footer
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{Kamal Sacranie}
+\fancyhead[RE,LO]{Chapter \thechapter}
+\fancyfoot[C]{\thepage}
+
+\renewcommand{\headrulewidth}{2pt}
+\renewcommand{\footrulewidth}{0pt}

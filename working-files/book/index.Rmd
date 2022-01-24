@@ -12,7 +12,10 @@ subtitle: "Machine Learning course using R with Joshua Loftus"
 ---
 
 ```{r, setup, include=F}
-knitr::opts_chunk$set(attr.source = ".numberLines", eval = F)
+knitr::opts_chunk$set(
+  attr.source = ".numberLines", eval = F, warning = F,
+  message = F, cache = T
+)
 ```
 
 # Preface {-}
@@ -34,3 +37,10 @@ I Like this guy. I wish I had taken this course for real lol :(
 
 - `tidyverse`: just a bunch of commonly used packages
 - `gapminder`: just some random datasets we can use
+
+```{r, eval=T, results=F}
+library(gapminder)
+library(fivethirtyeight)
+library(broom)
+library(tidyverse)
+```

@@ -1,0 +1,8 @@
+# Quesitons
+
+- Where the RSS is the sum of the squared differences between our model fit
+  line and the points? \@ref(eq:rse)
+- What the hell is going on in \@ref(why-squared-errors). In terms of
+  orthogonality
+- ### Risk `==` expected loss am confucsed about this section
+

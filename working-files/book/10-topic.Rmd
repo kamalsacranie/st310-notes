@@ -1,4 +1,0 @@
-# Quesitons
-
-- Where the RSS is the sum of the squared differences between our model fit
-  line and the points? \@ref(eq:rse)

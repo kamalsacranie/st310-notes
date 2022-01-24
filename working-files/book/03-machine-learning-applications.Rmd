@@ -115,7 +115,11 @@ Figure \@ref(fig:complexity-variance) shows us a great preview between a more
 complex model which visually even has more variance and a less complex model
 which doesn't deviate too much but as such has more bias.
 
-```{r copmplexity-variance, echo=FALSE, fig.cap='copmplexity-variance', out.height="30%", fig.align="center"}
+```{r complexity-variance, echo=FALSE, eval=T}
+#| out.width="40%",
+#| fig.cap='complexity-variance',
+#| fig.show='hold',
+#| fig.align="center"
 knitr::include_graphics(
   c(
     "./assets/03-machine-learning-applications/img/2022-01-23-02-58-55.png",

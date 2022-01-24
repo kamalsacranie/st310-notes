@@ -9,4 +9,4 @@ bookdown::pdf_book:
   citation_package: natbib
   keep_tex: yes
   csl: ../sources/apa.csl
-  highlight: breezedark
+  highlight: zenburn # “tango”, “pygments”, “kate”, “monochrome”, “espresso”, “zenburn”, “haddock”, “breezedark”
