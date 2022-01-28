@@ -1,4 +1,7 @@
 % Importing our necessary packages
+% Making headings start at same place at first lettter
+\usepackage{titlesec}
+\titlelabel{\llap{\thetitle\quad}}
 \usepackage{booktabs}
 % Footnotes fixed to bottom
 \usepackage[bottom]{footmisc}
@@ -76,9 +79,9 @@
 \definecolor{code}{RGB}{1,22,80} % This is how you define a color in latex
 \colorlet{shadecolor}{code} % redefining our shadecolor to be code color
 % Using tcolorbox to make a background box
-\usepackage[many]{tcolorbox}
-\tcbset{enhanced,colback=red!5!white,
-	colframe=red!75!black,fonttitle=\bfseries}
+\usepackage[many, listings]{tcolorbox}
+\tcbset{enhanced,colback=white!50!black,
+	colframe=white!50!black,fonttitle=\bfseries}
 % Renewing the shaded environemnt with new mdframed box
 \renewenvironment{Shaded}{
 	\bigskip

@@ -137,7 +137,7 @@ horizontal axis (i.e. this is what is given) and then looking at a probability
 distribution above the point on the line of the vertical axis (figure
 \@ref(fig:visual-conditional-prob)).
 
-```{r visual-conditional-prob, echo=F,}
+```{r visual-conditional-prob, echo=F, eval=T}
 #| fig.cap='Conditional probability visualisation',
 #| out.height="30%",
 #| fig.align="center",

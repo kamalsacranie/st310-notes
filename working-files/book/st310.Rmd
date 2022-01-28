@@ -43,6 +43,7 @@ library(gapminder)
 library(fivethirtyeight)
 library(broom)
 library(tidyverse)
+library(MASS)
 ```
 
 <!--chapter:end:index.Rmd-->
@@ -1015,7 +1016,7 @@ horizontal axis (i.e. this is what is given) and then looking at a probability
 distribution above the point on the line of the vertical axis (figure
 \@ref(fig:visual-conditional-prob)).
 
-```{r visual-conditional-prob, echo=F,}
+```{r visual-conditional-prob, echo=F, eval=T}
 #| fig.cap='Conditional probability visualisation',
 #| out.height="30%",
 #| fig.align="center",
@@ -1053,15 +1054,380 @@ just the absolute of the loss function:
 > For other quantiles you must take the absolute loss function and you have to
 > tilt it
 
+### Risk `==` expected loss
 
+As see from the examples in the previous section, for a given **loss function**
+$L(x,y,g)$, you can find the optimal regression function $f(x)$ by finding the
+regression function whihc minimises the risk i.e.:
+
+\begin{align*}
+  R(g) = \mathbb{E}_{X,Y}[L(X,Y,g)]\\
+  f(x) = \text{ arg }\underset{g}\min R(g)
+\end{align*}
+
+- Where $g$ is a function which predicts the value of $y$ from $x$
+- The risk of a given function that predicts $y$ from $x$ is its expected loss
+
+In statistical machine learning we can use algorithms like the Law of Large
+Numbers, Central Limit Theorem, subsampling. We can do this because
+expectations in probability models are the same thing as sums of data sampled
+from the probability models:
+
+\begin{align*}
+  \mathbb E \longleftrightarrow \dfrac{1}{n}\sum
+\end{align*}
+
+### Additional modeling assumptions
+
+We are currently looking at models which assume that the output variable is a
+linear function of $x$ or that it can be approximated as a linear function of
+$x$:
+
+\begin{align*}
+  f(x) := \mathbb E_{Y|X}(Y|X) = \beta_0 + \beta_1 X_1 + \cdots + \beta_p X_p
+\end{align*}
+
+> There are no error terms $\epsilon$ in this equation is because this is a
+> definition with no estimations and represents the absolute perfect model. In
+> reality, there is always going to be some incorrectness in our models in
+> general which are corrected by the error term we usually have.
 
 <!--chapter:end:06-history-ls-risk.Rmd-->
 
+# Multiple regression
 
-<!--chapter:end:07-topic.Rmd-->
+Sometimes there are more than one variables that correlate at different
+strengths with the output variable.
+
+- For example, if we correlate government welfare with poverty, there may me
+  another variable which dictates how much welfare people have to take, i.e.
+  age; older people can't work as much so they may need more welfare. It can be
+  more than just the fact that people are poor which makes them need welfare
+- We need a way to see if the correlation between the $y$ variable is
+  attributable to more than one $x$ variable.
+- Multiple regression was developed because, if you think about physical
+  experiments, you can isolate variables there and come to understand the
+  relationship. If you cannot isolate variables it is difficult to understand
+  their influence
+
+## When $p$ > 1
+
+When the number of predictor^[dependent] variables $p$ is greater than 1, we
+now need to think of our regression not as a line of best fit but instead as a
+hyperplane of best fit because we have multiple dependents now (figure
+\@ref(fig:multi-reg-plane)).
+
+```{r multi-reg-plane, echo=F, eval=T}
+#| fig.cap='multi-reg-plane',
+#| out.height="30%",
+#| fig.align="center",
+knitr::include_graphics(
+  "./assets/07-multiple-linear-regression/img/2022-01-24-19-22-42.png"
+)
+```
+
+But we are still doing a **least squares regression** so we are choosing the
+plane which minimises residuals among all possible hyperplanes.
+
+## Multi linear regression notation
+
+There are various ways to write the formula for a multi regression. The first
+is the formula for one observation $i$:
+
+\begin{equation}
+  y_{i} = \beta_{0} + \beta_{1}x_{1} + \beta_{2}x_{2} + \dots + \beta_{i}x_{i}
+  + \epsilon_{1} (\#eq:multi-regression)
+\end{equation}
+
+or the second method which uses a column of vectors and its inner product with
+the coefficients:
+
+\begin{align*}
+  y_{i} = x_{i}^{T}\beta + \epsilon_{i}
+\end{align*}
+
+Or, thirdly we can use what is called "random variable notation" where we
+denote all the observations in the set with capital letters:
+
+\begin{align*}
+  Y = X^{T}\beta + \epsilon
+\end{align*}
+
+And finally, we can also write it out all out once as a matrix which multiplies
+together to give all the terms possible^[Two common practices with matrix
+notation is to include a column of 1s for the intercept in the observations so
+that each observaiton has a $1\times\beta_0$ term. Or alternatively is is
+omitted by assuming the $\mathbf{y}$ vector is already centerd, i.e the model's
+mean (where the regression line passes through) is 0 so there is no intercept]:
+
+\begin{align*}
+  \begin{pmatrix}
+    y_1 \\
+    y_2 \\
+    \vdots \\
+    y_n
+  \end{pmatrix}
+    =
+    \begin{pmatrix}
+    1 & x_{11} & x_{12} & \cdots & x_{1p}\\
+    1 & x_{21} & x_{22} & \cdots & x_{2p}\\
+    \vdots & \vdots & \vdots & \ddots & \vdots \\
+    1 & x_{n1} & x_{n2} & \cdots & x_{np}\\
+  \end{pmatrix}
+    \begin{pmatrix}
+    \beta_0 \\
+    \beta_1 \\
+    \vdots \\
+    \beta_p
+  \end{pmatrix}
+    +
+    \begin{pmatrix}
+    \varepsilon_1 \\
+    \varepsilon_2 \\
+    \vdots \\
+    \varepsilon_n
+  \end{pmatrix}
+\end{align*}
+
+or:
+
+\begin{align*}
+\mathbf{y} = \mathbf{X} \beta + \mathbf{\varepsilon}
+\end{align*}
+
+### Other notational conventions
+
+We'll use common conventions in this course:
+
+- **Bold for vectors, bold and upper case for matrices**
+- Otherwise upper case *denotes random variable*
+- Error terms $\varepsilon = y - \mathbf x^T \beta$ never truly observed
+- **Residuals $r = y - \mathbf x^T \hat \beta$ used as a proxy for errors**
+- Greek letters like $\beta, \theta, \sigma, \Sigma$ usually *unknown parameters*
+- Greek letters with hats like $\hat \beta$ are estimates computed from data
+- Roman letters that usually denote functions with hats, like $\hat f$ are also estimates
+- Other Roman letters with hats like $\hat y$ are predictions
+
+<!--chapter:end:07-multiple-linear-regression.Rmd-->
+
+## Multiple linear regression and pseudoinversion
+
+### Matrices and vectors in `R`
+
+Detailed in section \@ref(matrices-and-vectors)
+
+## Why does [pseudoinversion][pseudoinversion] work
+
+Let's understand how pseudoinversion works.  
+Let $\mathbf A^\dagger = (\mathbf A^T\mathbf A)^{-1} \mathbf A^T$, then
+
+\begin{align*}
+  \mathbf A^\dagger \mathbf A = (\mathbf A^T\mathbf A)^{-1} \mathbf A^T \mathbf
+  A = (\mathbf A^T\mathbf A)^{-1} (\mathbf A^T \mathbf A) = \mathbf I
+\end{align*}
+
+## Least-squares solutions in matrix notation
+
+We can write a $p = n$^[Any number of parameter variables] regression using
+matrix notation as follows:
+
+\begin{align}
+  \hat {\mathbf \beta} = (\mathbf X^T\mathbf X)^{-1}\mathbf X^T \mathbf y =
+  \mathbf X^\dagger \mathbf y (\#eq:matrix-multi-reg)
+\end{align}
+
+\@ref(eq:matrix-multi-reg) is a general formula which will work as long as
+$\mathbf{X}^{T}\mathbf{X}$ is invertable^[I.e. the **columns of X have full
+rank** (because the columns are our predictor variables) i.e. you can do a full
+gauss reduction?]. Our matrices often are invertible if $n>p$^[observations are
+greater than the number of variables].
+
+## Linear algebra and geometric intuition
+
+Okay so we have our model in matrix notation. Now we can get the predictions
+form the linear model by
+
+\begin{align*}
+  \hat{\mathbf y} = \mathbf {X} \hat{\mathbf \beta} = \mathbf X (\mathbf
+  X^T\mathbf X)^{-1}\mathbf X^T \mathbf y = \mathbf H \mathbf{y}
+\end{align*}
+
+if we define
+
+\begin{align*}
+  \mathbf H = \mathbf X (\mathbf X^T\mathbf X)^{-1}\mathbf X^T
+\end{align*}
+
+- We multiply the estimated betas by the observations of **X**
+- The $\mathbf{H}$ matrix is called the "hat" matrix
+
+$\mathbf{H}$ is also a projection matrix. If you square it, nothing happens:
+$\mathbf{H}^{2} = \mathbf{H}$. When you have a projection matrix like this. The
+matrix is the projection onto the column space of $\mathbf{X}$:
+
+- For any $n$-vector **v**, th $n$-vector $\mathbf{Hv}$ is the *orthogonal
+  projection of* **v** onto the column space of $\mathbf{X}$
+- Because it is an orthogonal projection we implicitly minimise the least
+  squares. I.e. among all the vectors you can form using the predictor
+  varaibles, the orthogonal projection of vector $\mathbf{y}$ onto the
+  columnspace of $\mathbf{X}$ gives us the plane which is closest to the
+  actual result varaible
+
+Question: why does the hat matrix project orthogonally
+
+### The matrix loss function
+
+We thus have the loss function
+
+\begin{align*}
+  L(\mathbf X, \mathbf y, \mathbf \beta) = (\mathbf y - \mathbf X
+  \beta)^T(\mathbf y - \mathbf X \beta)$$
+\end{align*}
+
+(just a different way of writing sum of squared errors)
+
+- Consider each coordinate separately and take univariate partial derivatives
+- Use vector calculus and compute the gradient
+- (Or even use matrix calculus identities)
+
+Reach the same conclusion: at a stationary point of $L$,
+
+\begin{align*}
+\mathbf X^T \mathbf X \hat \beta = \mathbf X^T \mathbf y
+\end{align*}
+
+## Categorical predictors
+
+Let's take the case where we have a categorical variable as a predictor. First
+we create a distribution of observations from a sample and then create a factor
+aout of them:
+
+```{r, eval=T}
+x <- as.factor(
+  sample(
+    c("A", "B", "C"),
+    size = 10,
+    replace = T
+  )
+)
+```
+
+- `sample` takes a vector of values we wish to choose/sample from, `size` is
+  how large we want our sample and then `replace` specifies with our without
+  replacement
+- The `factor` function creates a categorical variable with our sample
+
+`R` has a function called `model.matrix` which displays your model in matrix
+from when you pass through a `~` formula:
+
+```{r, eval=T}
+print(model.matrix(~x))
+X <- model.matrix(~ x - 1)
+```
+
+- Reminder: you only need to code $n - 1$ of the values in your categorical
+  variable because the last one is implicit. In this case `A` is implicit and
+  when the value is `B` or `C`, then it uses that intercept plus the offset of
+  the variable
+- The `- 1` in our formula means that we omit the intercept and code `A`
+  instead
+
+**Computing the hat matrix**:
+
+```{r, eval=T}
+# timxing X by its inverse (pseudo) to get the identity mat
+Xinv <- X %*% ginv(X)
+head(round(Xinv, 2))
+```
+
+To see how this matrix gives us predictions, let's look at which indexes
+of our list of A, B, C `x` contained the letter C:
+
+```{r, eval=T}
+cat_positions <- which(x == "C")
+cat_positions
+```
+
+These tells us what rows had C in matrix `X`. Nothing the output, let's look at
+the corresponding columns to the output numbers. We note that the corresponding
+columns are all the same:
+
+```{r, eval=T}
+Xinv[, cat_positions]
+```
+
+We notes that these columns are all the same. Furthermore, we note that C
+appears `r length(cat_positions)` and the decimals present in the columns which
+correspond to the rows who are the probability that a C will be in that
+position. So what this matrix does to give predictions is that it gives the
+within-group averages of the outcome variable. So *if we had the outcome vector
+$\mathbf{y}$*, the **prediction for some $y$** that corresponds an observation
+where the categorical variable's value is C, that prediction will be the
+average $y$ among the rows of data that had the value of C.
+
+## Interoperating coefficients of a regression
+
+Because we have more variables, we can plot pairs of variables (residuals?)
+together (similar to looking at the correlation matrix for all the variables)
+which may reveal a higher dimensional relationship in the residuals (bias).
+
+What people really want when inerpreting coefficients is:
+
+1. Our regression model is a conditional expectation model (given $x$ what is
+   $y$). People want interpreting coefficients to be as simple as taking the
+   partial derivative of that predictor variable^[I.e. what is the impact
+   ceterus paribus]:
+   \begin{align*}
+     \frac{\partial}{\partial x_j} \mathbb E[\mathbf y | \mathbf X] = \beta_j
+     \approx \hat \beta_j
+   \end{align*}
+   When you partially differential a linear regression you are only left with
+   one $\beta$ term
+2. People want to believe that if you could feasibly change the variable
+   associated with $\beta_{j}$ ($x_{j}$) then there would be a corresponding
+   change in $y$ of $\beta_{j}$ units (i.e. a causal relationship)
+
+Both of these desires can lead to serious incorrectness in our model. There
+could be **relationships between predictors**^[i.e. predictors that covary].
+There are also likely to be important variables which are not even in our
+model.
+
+::: {.example #non-linear-violation name="Breaking the assumption of nonlinearity"}
+<br />\hfill\break
+Suppose there is one predictor variable $x$, and a non-linear model fits the
+CEF^[Conditional expectation function]:
+
+\begin{align*}
+  \mathbb E[\mathbf y |X = x] = \beta_0 + \beta_1 x + \beta_2 x^2
+\end{align*}
+
+We don't know the $\beta$'s but we have some data, and we use multiple linear
+regression to fit the coefficients:
+
+```{r eval = FALSE}
+x2 <- x^2
+lm(y ~ x + x2)
+```
+
+But, there's a **problem**:
+
+\begin{equation}
+  \frac{\partial}{\partial x} \mathbb E[\mathbf y | x] = \beta_1 + 2\beta_2 x
+  \neq \beta_1 \approx \hat \beta_1
+\end{equation}
+
+- I.e. we cant tale the partial derivate because the 2nd term will still depend
+  on $x$. This can be somewhat solved in simple scenarios where it's easy to
+  see what other terms are dependent on $x$ by **only using the partial
+  locally** (almost like you would with a Taylor approximation)
+
+:::
+
+---
 
 
-<!--chapter:end:08-topic.Rmd-->
+
+<!--chapter:end:08-multiple-reg-r.Rmd-->
 
 
 <!--chapter:end:09-topic.Rmd-->
@@ -1072,6 +1438,9 @@ just the absolute of the loss function:
   line and the points? \@ref(eq:rse)
 - What the hell is going on in \@ref(why-squared-errors). In terms of
   orthogonality
+- ### Risk `==` expected loss am confucsed about this section
+- Why does the matrix only work on one side. I clearly need a matrix refresher
+  ()
 
 <!--chapter:end:98-questions-to-ask.Rmd-->
 
@@ -1263,6 +1632,78 @@ lm(y ~ ., data = my_data)
 
 What you need to avoid here though is using a variable which is unique to every
 piece of data, like brand, etc.
+
+## Matrices and vectors
+
+In `R` you can create a matrix using the `matrix` function:
+
+```{r, eval=T}
+x <- matrix(data = 1:9, nrow = 3, ncol = 3)
+matrix(1:9, nrow = 3, ncol = 3, byrow = T)
+```
+
+- We see here that we specify the data as a vector^[This is kind of like a list
+  but it only holds one type of data type and is strictly one dimentional] of
+  numbers
+- We also specify the number of rows and columns and the way in which the data
+  is spread across the columns/rows
+
+
+### Matrix multiplication
+
+In `R`, you can multiply matrices together with the `%*%` operator. We can
+check the dimensions of our matrix:
+
+```{r, eval=T}
+dim(x)
+```
+
+> **NB**: your matrices MUST be able to be mathematically multipliable of
+> course (cols `==` rows). You must be careful when multiplying because `R`
+> will not throw an error message if one of the dimentions are a multiple of
+> the other
+
+One of the **frustrating things** about `R` is that if you use the `dim`
+function on a list object, it will say that it has no dimensions, but if you
+use it in a function that treated it as a vector^[Vectors have to have defined
+dimensions], it will have $0\times 0$ dimensoins:
+
+```{r, eval=T}
+dim(rep(1, 3))
+x %*% rep(1, 3) # The list auto converts to a vector here
+```
+
+- `rep` is how you define a list of the same number repeating themselves for
+  the number of times you pass in as the second argument
+
+### Transpose and symmetry
+
+Recall: even if a matrix $\mathbf A$ is not square, both $\mathbf A^{T}\mathbf
+A$ and $\mathbf A\mathbf A^{T}$ **are square and symmetric**^[A matrix
+multiplied by it's transpose is always square]:
+
+```{r, eval=T}
+A <- matrix(c(rep(1, 4), 0, 0), nrow = 3)
+t(A) %*% A
+```
+
+- This matrix is invertable but `A %*% t(A)` is not
+
+### Pseudoinversion
+
+```{r, eval=T}
+MASS::ginv(A)
+```
+
+- This is a generalised inverted matrix which can act like a "one sided"
+  inverse on matrix `A`
+
+The generalised inverse only works when multiplying on the left to give the
+$2\times 2$ identity matrix:
+
+```{r, eval=T}
+ginv(A) %*% A
+```
 
 <!--chapter:end:99-R.Rmd-->
 

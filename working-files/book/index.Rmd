@@ -43,4 +43,7 @@ library(gapminder)
 library(fivethirtyeight)
 library(broom)
 library(tidyverse)
+library(MASS)
+library(ggfortify)
+library(palmerpenguins)
 ```

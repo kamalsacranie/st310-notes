@@ -5,4 +5,5 @@
 - What the hell is going on in \@ref(why-squared-errors). In terms of
   orthogonality
 - ### Risk `==` expected loss am confucsed about this section
-
+- Why does the matrix only work on one side. I clearly need a matrix refresher
+  ()

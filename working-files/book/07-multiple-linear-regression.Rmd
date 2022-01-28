@@ -21,7 +21,7 @@ now need to think of our regression not as a line of best fit but instead as a
 hyperplane of best fit because we have multiple dependents now (figure
 \@ref(fig:multi-reg-plane)).
 
-```{r multi-reg-plane, echo=F,}
+```{r multi-reg-plane, echo=F, eval=T}
 #| fig.cap='multi-reg-plane',
 #| out.height="30%",
 #| fig.align="center",

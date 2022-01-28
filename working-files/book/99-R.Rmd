@@ -186,3 +186,75 @@ lm(y ~ ., data = my_data)
 
 What you need to avoid here though is using a variable which is unique to every
 piece of data, like brand, etc.
+
+## Matrices and vectors
+
+In `R` you can create a matrix using the `matrix` function:
+
+```{r, eval=T}
+x <- matrix(data = 1:9, nrow = 3, ncol = 3)
+matrix(1:9, nrow = 3, ncol = 3, byrow = T)
+```
+
+- We see here that we specify the data as a vector^[This is kind of like a list
+  but it only holds one type of data type and is strictly one dimentional] of
+  numbers
+- We also specify the number of rows and columns and the way in which the data
+  is spread across the columns/rows
+
+
+### Matrix multiplication
+
+In `R`, you can multiply matrices together with the `%*%` operator. We can
+check the dimensions of our matrix:
+
+```{r, eval=T}
+dim(x)
+```
+
+> **NB**: your matrices MUST be able to be mathematically multipliable of
+> course (cols `==` rows). You must be careful when multiplying because `R`
+> will not throw an error message if one of the dimentions are a multiple of
+> the other
+
+One of the **frustrating things** about `R` is that if you use the `dim`
+function on a list object, it will say that it has no dimensions, but if you
+use it in a function that treated it as a vector^[Vectors have to have defined
+dimensions], it will have $0\times 0$ dimensoins:
+
+```{r, eval=T}
+dim(rep(1, 3))
+x %*% rep(1, 3) # The list auto converts to a vector here
+```
+
+- `rep` is how you define a list of the same number repeating themselves for
+  the number of times you pass in as the second argument
+
+### Transpose and symmetry
+
+Recall: even if a matrix $\mathbf A$ is not square, both $\mathbf A^{T}\mathbf
+A$ and $\mathbf A\mathbf A^{T}$ **are square and symmetric**^[A matrix
+multiplied by it's transpose is always square]:
+
+```{r, eval=T}
+A <- matrix(c(rep(1, 4), 0, 0), nrow = 3)
+t(A) %*% A
+```
+
+- This matrix is invertable but `A %*% t(A)` is not
+
+### Pseudoinversion
+
+```{r, eval=T}
+MASS::ginv(A)
+```
+
+- This is a generalised inverted matrix which can act like a "one sided"
+  inverse on matrix `A`
+
+The generalised inverse only works when multiplying on the left to give the
+$2\times 2$ identity matrix:
+
+```{r, eval=T}
+ginv(A) %*% A
+```
