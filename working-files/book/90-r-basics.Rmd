@@ -1,4 +1,8 @@
-# `R` notes^[These are probably temporary and will go into own book]
+# (APPENDIX) Appendices {-}
+
+# (PART) Appendices {-}
+
+# `R` basic notes
 
 > This is the more general stuff that isn't categorisable into the lecture
 > work. For specific `R` functions just look at the coursework in the root
@@ -149,44 +153,6 @@ much like you would use it in js
 filter(dataset, c(year == 2000, continent == "Asia", ...))
 ```
 
-## Miscellaneous tips
-
-### Viewing your dataset in a spreadsheet-like manner
-
-```{r}
-View(<dataset>)
-```
-
-### Generating a polynomial
-
-You can generate a polynomical using:
-
-```{r}
-poly({datacolumn}, {polynomial degree})
-```
-
-- This will basically plot a standard polynomial for the `x` data values
-  (vector?) that you pass as an arg.
-
-### Adding cols onto a dataframe
-
-You can use `augment` to add columns onto a dataframe
-
-```{r}
-augment(my_df, newdata = newdf)
-```
-
-### Including all variables in your model
-
-The shorthand to inlcude all the variables in your dataset in your model is:
-
-```{r}
-lm(y ~ ., data = my_data)
-```
-
-What you need to avoid here though is using a variable which is unique to every
-piece of data, like brand, etc.
-
 ## Matrices and vectors
 
 In `R` you can create a matrix using the `matrix` function:
@@ -257,4 +223,52 @@ $2\times 2$ identity matrix:
 
 ```{r, eval=T}
 ginv(A) %*% A
+```
+
+## Miscellaneous tips
+
+### Viewing your dataset in a spreadsheet-like manner
+
+```{r}
+View(<dataset>)
+```
+
+### Generating a polynomial
+
+You can generate a polynomical using:
+
+```{r}
+poly({datacolumn}, {polynomial degree})
+```
+
+- This will basically plot a standard polynomial for the `x` data values
+  (vector?) that you pass as an arg.
+
+### Adding cols onto a dataframe
+
+You can use `augment` to add columns onto a dataframe
+
+```{r}
+augment(my_df, newdata = newdf)
+```
+
+### Including all variables in your model
+
+The shorthand to inlcude all the variables in your dataset in your model is:
+
+```{r}
+lm(y ~ ., data = my_data)
+```
+
+What you need to avoid here though is using a variable which is unique to every
+piece of data, like brand, etc.
+
+### `rbind`
+
+Take a sequence of vector, matrix or data-frame arguments and combine by
+columns or rows, respectively. We are basically concatenating
+tables/matrices/vectors.
+
+```{r}
+rbind(<object-1>, <object-2>)
 ```

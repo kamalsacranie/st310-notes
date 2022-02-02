@@ -1,0 +1,27 @@
+# General
+
+## Artificially inflating $R^{2}$ {#inflating-r-sq}
+
+```{r, eval=T}
+peng_lm_noise <- lm(
+  body_mass_g ~ flipper_length_mm + species + noise1 + noise2 + noise3,
+  # adding a vector of random numbers to our data using the mutate function
+  data = penguins %>% mutate(
+    noise1 = rnorm(n()),
+    noise2 = rnorm(n()),
+    noise3 = rnorm(n()),
+  )
+)
+glance(peng_lm_noise)
+```
+
+> `n()` just tells you the number of observations in your dataset. We could
+> also take the size of the dataset and index out the rows value
+
+The important takeaway is that the $R^{2}$ here is greater than the $R^{2}$
+produced in section \@ref(penguin-multi-r-sq). This is why we need an adjusted
+$R^{2}$ to negate the artificial inflation.  
+Sometimes the adjusted $R^{2}$ can increase but on average it will account for
+these added variables. I $R^{2}$ inflates because there are some correlations
+between predictor variables even if very small. This means that more of the
+variance will be explained by the mode eventhough it's not useful explanation?

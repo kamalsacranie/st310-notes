@@ -10,9 +10,13 @@
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{cancel}
+% Allows us to have subfigures
+\usepackage{subfig}
 % Setting our text to not bet justified across the whole page and no hyphen
 \usepackage[document]{ragged2e}
 \usepackage[none]{hyphenat}
+% Used ot keep floats in example boxes
+\usepackage{float}
 
 % Importing our tikz
 \usetikzlibrary{trees}
@@ -80,26 +84,32 @@
 \colorlet{shadecolor}{code} % redefining our shadecolor to be code color
 % Using tcolorbox to make a background box
 \usepackage[many, listings]{tcolorbox}
-\tcbset{enhanced,colback=white!50!black,
-	colframe=white!50!black,fonttitle=\bfseries}
+\newtcolorbox{codeboxback}{
+	enhanced,
+	colback=white!50!black,
+	colframe=white!50!black,
+	fonttitle=\bfseries,
+	breakable,
+	drop fuzzy midday shadow=black!30!white,
+}
 % Renewing the shaded environemnt with new mdframed box
 \renewenvironment{Shaded}{
 	\bigskip
-	\begin{tcolorbox}[drop fuzzy midday shadow]
-		\begin{mdframed}[
-				skipabove=\topskip*2,
-				outerlinewidth= 0,
-				linewidth=0pt,
-				roundcorner= 3pt,
-				backgroundcolor= shadecolor,
-				outerlinecolor= shadecolor,
-				innertopmargin= \topskip,
-				innerbottommargin=\topskip,
-				leftmargin=-0.8cm,
-				rightmargin=-0.8cm
-			]}{
-		\end{mdframed}
-	\end{tcolorbox}
+	% \begin{codeboxback}%[drop fuzzy midday shadow]
+	\begin{mdframed}[
+			skipabove=\topskip*2,
+			outerlinewidth= 0,
+			linewidth=0pt,
+			roundcorner= 3pt,
+			backgroundcolor= shadecolor,
+			outerlinecolor= shadecolor,
+			innertopmargin= \topskip,
+			innerbottommargin=\topskip,
+			leftmargin=-0.4cm,
+			rightmargin=-0.4cm
+		]}{
+	\end{mdframed}
+	% \end{codeboxback}
 	\smallskip
 }
 
@@ -108,9 +118,45 @@
 
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[LE,RO]{Kamal Sacranie}
-\fancyhead[RE,LO]{Chapter \thechapter}
+\fancyhead[R]{Kamal Sacranie}
+\fancyhead[L]{Chapter \thechapter}
 \fancyfoot[C]{\thepage}
-
+% Changing header rule style
 \renewcommand{\headrulewidth}{2pt}
 \renewcommand{\footrulewidth}{0pt}
+
+%%%%% THE SOLUTION TO WRAPPING ENVS!!!
+% Styling ocde output
+\AddToHook{env/verbatim/before}{\begin{mdframed}[
+			skipabove=\topskip*2,
+			outerlinewidth= 0,
+			linewidth=0pt,
+			backgroundcolor= black!10!white,
+			outerlinecolor= black!40!white,
+			roundcorner=5pt,
+			innertopmargin= \topskip,
+			innerbottommargin=\topskip,
+		]}
+		\AddToHook{env/verbatim/after}{\end{mdframed}}
+
+% Styling the example box
+\newtcolorbox{examplebox}[2][]{
+	colback=green!20!white,
+	colframe=green!20!black,
+	coltitle=white,
+	fonttitle=\bfseries,
+	colbacktitle=green!20!black,
+	enhanced,
+	breakable,
+	grow to left by=0.5cm,
+	grow to right by=0.5cm,
+	left=0.7cm,
+	right=0.5cm,
+	attach boxed title to top center={yshift=-2mm},
+	title={#2},#1
+}
+% Makes the examplebox handle footnotes correctly
+\makesavenoteenv{examplebox}
+% Enclosing our example envs in a tcolorbox
+\AddToHook{env/example/before}{\begin{examplebox}{Example}}
+		\AddToHook{env/example/after}{\end{examplebox}}

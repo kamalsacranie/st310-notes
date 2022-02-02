@@ -1,0 +1,193 @@
+# Machine learning and causality
+
+> In order to change something in the world we have to know causality rather
+> than just an accurate prediction.
+
+We ultimately want to take some actions to change outcomes and influence
+reality. We can only make causal conclusions with the following **causal
+assumptions**:
+
+(@causal1) some mathematical (probability) model relating variables (possibly
+           including unobserved variables)
+(@causal2) a direction for each relationship
+(@causal3) changing a variable results in corresponding changes in other
+           variables which are functionally "downstream"
+
+We must think deterministicly e.g.:
+
+- We must assume the direction of the relationship $X \to Y$, so $y = f(x)$ and
+  changing $x$ to $x'$ means $y$ also changes to $f(x')$
+- Even if if $f$ has an inverse, this model does *not* mean that changing $y$
+  to $y'$ results in $x$ changing to $f^{-1}(y')$
+
+> Think about how if you change the temperature, a thermometer will change but
+> if you change the thermometer, the temperature will not change
+
+## Interpreting regression
+
+### Interpreting regression without causality
+
+If we estimate a CEF^[Conditional expectation function] $\hat{f}(x)\approx
+\mathbb E[Y|X = x]$, we would like to interpret this as meaning if we change
+$x$ to $x\prime$, then:
+
+\begin{align*}
+  \mathbb E[Y|X = x]\text{ will change from }\hat{f}(x)\text{ to
+  }\hat{f}(x\prime)
+\end{align*}
+
+- i.e. we can influence $\hat{f}$ by changing $x$ because we have assumed
+  causal assumptions (@causal2) and (@causal3)^[From section
+  \@ref(machine-learning-and-causality)]
+
+### How we should rather approach regression interpretation
+
+We may want to approach a regression with the following mindsets:
+
+- **Causal discovery**: learn a graph (DAG) from data (very difficult
+  especially if there are many variables)
+- **Estimation/inference** 
+  - *Parametric*: estimate $f$ and/or $g$ assuming they are linear or have some
+    other (low-dimensional) parametric form, get CIs
+  - *Non-parametric*: use machine learning instead
+- **Optimization**: find the "best" intervention/policy
+
+## Estimation tasks
+
+### Mediation analysis and treatment with observed confounding
+
+How much of the relationship between $X$ and $Y$ can be explained throguh a
+**mediator variable** $M$.
+
+> E.e., if we think about GDP per capita and life expectancy, we may wonder how
+> these two relate directly. Alternatively, we can ask how much GDP per capita
+> passes through healthcare expenditure to see how long life expectancy is. If
+> spending on healthcare is greater, then we may see an increase in life
+> expectancy.
+
+We can represent mediaiton analysis using a model. If we know functions, we can
+simulate the consequences of an intervention. The DAG for the model is shown in
+figure \@ref(fig:dag-mediation-anal).  
+We assume the following:
+
+\begin{align*}
+ x = \text{exogeneous}, \quad  m = f(x) + \varepsilon_m, \quad y = g(m, x) +
+ \varepsilon_y
+\end{align*}
+
+- That is, $x$ influence our mediator $m$ (with some noise) and the outcome $y$
+  is influenced by both $x$ and $m$ (with noise) pictured in figure
+  \@ref(fig:dag-mediation-anal)
+
+Our counterfactual^[What would happen if we were to change our exogenous
+variable $x$ to something else.] is $x\leftarrow x\prime$, so:
+
+\begin{align*}
+  m \gets f(x\prime) + \varepsilon_m, \quad y \gets g(f(x\prime) +
+  \varepsilon_m, x\prime) + \varepsilon_y
+\end{align*}
+
+- I.e. the distribution of $m$ is changed and $y$ is changed
+  - **Direct effects**
+  - **Indirect effects**: homuch of the changes goes from $X\rightarrow
+    M\rightarrow Y$
+
+```{r dag-mediation-anal, echo=F, eval=T}
+#| fig.cap='Mediation',
+#| out.width="50%",
+#| fig.align="center",
+#| fig.pos="H"
+library(ggdag)
+ggdag_mediation_triangle(x_y_associated = TRUE) +
+  geom_dag_text(size = 10) +
+  geom_dag_edges(edge_width = 1.5) +
+  scale_color_grey() +
+  theme_dag_blank()
+```
+
+Let's no think about **observed confounding**.  
+Let's relabel the mediation variable, $M$, to $T$, a ***treatment*** variable.
+
+> A treatment variable is a variable of interest for which we do not have
+> experimental data
+
+We can then analyse **the effect of $T$, while controlling for $X$**. This
+yields the counterfactual:
+
+\begin{align*}
+  T\leftarrow,\text{ so }Y^{t} := Y\leftarrow g(t,X) + \epsilon_{y}
+\end{align*}
+
+- We are estimating the effect of $t$ on $Y$ but in the real world, $T$ is
+  influenced by $X$ and $X$ influences $Y$ so we cannot look at $T$ alone
+  because of the "confounder" $X$.
+
+::: {.example #observed-confounding name="Observed confounding where $T$ is binary"}
+<br />\hfill\break
+Assume $T$ is binary, and we are interested in:
+
+1. Average treatment effect^'[ATE]:
+   \begin{align*}
+     \tau = \mathbb E[Y^{1} - Y^{0}]
+   \end{align*}
+   - This is the **difference in $Y$ if you make $t = 1$ vs $t = 0$**
+1. and the conditional ATE^[CATE. She sounds like a lovely girl...]:
+   \begin{align*}
+     \tau(x) = \mathbb E[Y^{1} - Y^{0}|X = x]
+   \end{align*}
+   - Naturally called the ***conditional*** because it is conditional on a
+     given observation $x$
+   - This is useful for understanding *how the treatment effectiveness* depends
+     on $x$
+
+> If $T$ is not a binary, we could fix a baseline value $t_{0}$ and then
+> compare other treatment values relative to this one, e.g., estimate a causal
+> contrast
+> \begin{align*}
+    \tau_{t,t_{0}} = \mathbb E[Y^{t} - Y^{t_{0}}]
+  \end{align*}
+> for various value so $t$. A similar thing can be done for CATE
+
+:::
+
+---
+
+## Two staged regression
+
+This basically assumes two regression equations, one of which depends on the
+other. In the parametric case^[i.e. assuming everything is linear], we have:
+
+\begin{align*}
+  Y =& T\theta + X\beta + \epsilon_{Y}\\
+  T =& X\alpha + \epsilon_{T}.
+\end{align*}
+
+- Where $\hat{\theta}$ [is estimated using a two staged least
+  squares](https://www.ibm.com/docs/en/spss-statistics/SaaS?topic=regression-two-stage-least-squares)
+
+Or, there is a **partially linear version** which looks at a treatment effect
+with a **linear coefficient** but also depends on functions of the other
+parameters:
+
+\begin{align*}
+  Y =& T\theta + g(X) + \epsilon_{Y}\\
+  T =& m(X) + \epsilon_{T}
+\end{align*}
+
+- Here the so-called "nuisance functions" $\hat{g}, \hat{m}$ are estimated
+  using more complicated machine learning methods
+
+### High-dimensional regression example
+
+One example application here (a special case) is the case when $X$ is
+high-dimensional and we want to estimate the nuisance functions as "sparse
+linear models"^[Explained in section \@ref(tbd)]. We might want to estimate
+these sparse linear models with the lasso^[Explained in \@ref(tbd)]. So we
+would fit:
+
+- $T\sim X$ which gives us a subset of predictor variables $X_{m}$
+- $Y\sim X$ to get a subset of predictors $X_{g}$
+
+We would then fit the **least squares** $Y\sim T + X_{m} + X_{g}$. We can then
+estimate the coefficient of $T$ in the least squares model as our estimate of
+$\hat{\theta}$

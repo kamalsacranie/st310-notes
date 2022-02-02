@@ -1,0 +1,14 @@
+# (PART) Week 3 {-}
+
+# Causal inference
+
+> This section is more theoretical. Going to go easy on the notes. These notes
+> are for technical things that I want to remember. I'm not gonna be asked to
+> write an essay on causal inference because I'm self enrolled.
+
+- People often search for causality which end up in confirmation bias
+
+He basically talk about the cool causality models and then builds a framework
+of thinking around changing one value that we derive from regression and having
+a ripple effect to other values by subbing that function in for the values.
+

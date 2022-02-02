@@ -1,0 +1,327 @@
+# Classification and logistic regression Part 1
+
+<!-- We use some R to make nice logistic visuals -->
+
+```{r logit-data, echo=F, eval=T}
+set.seed(42)
+n <- 50
+Y <- rbinom(n, 1, .5)
+train <- data.frame(
+  y = factor(Y),
+  x1 = rnorm(n) + 1.5 * Y,
+  x2 = rnorm(n) + 1.2 * Y
+)
+```
+
+- Classification is when we are doing **supervised learning** predicting
+  **categorical** variable as opposed to regression which predict a
+  **numeric/continuous variable**.
+- In machine learning, we denote categorical variables as $K$ = the number of
+  unique classes.
+- We mostly focus on the binary case
+
+## Logistic regression
+
+Logistic regression is a machine learning method used to perform classification
+predictions. The notation for the general logistic regression is:
+
+\begin{equation}
+  \begin{aligned}
+    & &\mathbb E[Y|\mathbf{X} = \mathbf{x}] = g^{ - 1}(\mathbf{x}^{T}\beta)\\
+    &\text{for} \qquad&\\
+    & &g(p) = \log\left(\dfrac{p}{1 - p}\right)
+  \end{aligned}(\#eq:logi-reg)
+\end{equation}
+
+- In this notation here, we are assuming that we have labelled the outcomes $Y$
+  as 0 or 1. So in this case, the probabiliyt that $Y = 1$ is the same as it's
+  expected value^[Because it's a Bernoulli distribution, we can just sum up all
+  the values and then divide which will give the expected value; also the
+  probability we get a 1]
+- We use the word *regression* because we are modelling an expectation function
+- The condition expectation of $Y$ is some function applied to the liner
+  function of $\mathbf{x}$
+- $g(p)$ here is known as the "logit" function
+
+> (1) Logistic regression is a special case of models called **general linear
+> models (GLMs)**  
+> (2) The $g^{-1}$ inverse function is known as the link function
+
+### The S curve
+
+In figure \@ref(fig:s-curves) (a) we have one predictor variable on the
+$x$-axis and we are *using the $y$-axis to represent the outcome*^[Coded as 0
+and 1]. The $S$ curve (AKA. the logistic curve) shows the probability that $y =
+1$. At a *given value of $x$*, the model **tells you what the probability of $y
+= 1$ is**.  This is great, but, we typically want to have a **firm answer of
+classification**, not a probability. The way we get from the probabilities to a
+prper classification is by *setting a threshold*, shown in figure
+\@ref(fig:s-curves) (b); i.e. if it is greater than the threshold, it is
+classified at 1^[Logistic regression finds that line].
+
+```{r s-curves, echo=F, eval=T}
+#| out.width="50%",
+#| fig.cap='S curves',
+#| fig.show='hold',
+#| fig.align="center",
+#| fig.subcap=c("Logistic regression", "Threshold"),
+eg1 <- ggplot(train, aes(x1, y)) +
+  geom_point(aes(color = y), show.legend = FALSE, alpha = .4) +
+  geom_line(
+    data = augment(
+      glm(y ~ x1, family = "binomial", data = train),
+      newdata = data_grid(
+        data = train,
+        x1 = seq_range(x1, 100, expand = .1)
+      ),
+      type.predict = "response"
+    ),
+    aes(x1, .fitted + 1),
+    size = 1
+  ) +
+  scale_color_viridis_d(option = "D", end = .8) +
+  annotate("text", x = 0.2, y = 1.5, label = "g^{-1}", size = 6, parse = TRUE)
+eg1
+eg1 +
+  annotate("segment",
+    x = .9,
+    xend = .9,
+    y = .8,
+    yend = 2.2,
+    linetype = "dashed",
+    size = 1,
+    color = "blue"
+  ) +
+  geom_point(
+    data = train,
+    aes(color = y), alpha = .4,
+    show.legend = FALSE
+  ) +
+  annotate("text",
+    x = -.25, y = 2.2, color = "red",
+    label = "false negatives", size = 6
+  ) +
+  annotate("text",
+    x = 2, y = 2.2,
+    label = "true positives", size = 6
+  ) +
+  annotate("text",
+    x = -.25, y = .8,
+    label = "true negatives", size = 6
+  ) +
+  annotate("text",
+    x = 2, y = .8, color = "red",
+    label = "false positives", size = 6
+  )
+```
+
+- In binary classification we have false positive^[Type 1 error?: rejecting the
+  null when it is correct] and false negatives^[Type 2 error: accepting the
+  null when it is incorrect] which are also shown on figure
+  \@ref(fig:s-curves) (a)
+- When we move the threshold line left, we have less false negatives but more
+  false positives and vice-versa. As you change the threashold, there 
+
+## Logistic regression with two predictors with a binary outcome
+
+In figure \@ref(fig:two-x-binary-outcome) we show more than one predictor
+variable where both axes are **predictor variables** and the class of a given
+point is denoted by the shape of the point; i.e. the independent is on the
+$z$-axis.
+
+```{r two-x-binary-outcome, echo=F, eval=T}
+#| fig.cap='two-x-binary-outcome',
+#| out.height="30%",
+#| fig.align="center",
+train_plot <-
+  ggplot(train, aes(x1, x2)) +
+  geom_point(aes(shape = y, fill = y),
+    color = "black", size = 2, stroke = 1,
+    show.legend = FALSE, alpha = .4
+  ) +
+  scale_shape_manual(values = c(21, 22)) +
+  scale_fill_viridis_d(direction = -1, end = .8)
+train_plot
+```
+
+- you can see that there is signal in the two predictor variables as they seem
+  to be positively associated with the square class
+
+We can use logistic regression as a classification model which essentially
+creates threasholds. Figure \@ref(fig:logi-reg-2x) shows us the logistic
+regression in this particular case where we have two predictor variable axes.
+
+```{r logi-reg-2x, echo=F, eval=T}
+#| fig.cap='logi-reg-2x',
+#| out.height="30%",
+#| fig.align="center",
+logit_model <- glm(y ~ x1 + x2, family = "binomial", data = train)
+logit_surface <- logit_model %>%
+  augment(
+    type.predict = "response",
+    newdata = data_grid(
+      data = train,
+      x1 = seq_range(x1, 100, expand = .1),
+      x2 = seq_range(x2, 100, expand = .1)
+    )
+  )
+ggplot(
+  data = logit_surface,
+  aes(x1, x2)
+) +
+  geom_contour_filled(
+    aes(z = .fitted),
+    show.legend = FALSE,
+    alpha = .3,
+  ) +
+  geom_abline(
+    slope = -coef(logit_model)[2] / coef(logit_model)[3],
+    intercept = 3.05, linetype = "dashed", size = 1, color = "blue"
+  ) +
+  geom_point(
+    data = train,
+    aes(shape = y, color = y),
+    size = 2, stroke = 1, alpha = .9,
+    show.legend = FALSE
+  ) +
+  scale_shape_manual(values = c(21, 22)) +
+  scale_color_viridis_d(option = "viridis", direction = -1, end = .8) +
+  scale_fill_viridis_d(option = "viridis", end = .8) +
+  geom_point(
+    data = augment(logit_model,
+      type.predict = "response"
+    ) %>%
+      mutate(
+        yhat = as.numeric(.fitted > .56),
+        class = as.numeric(y) - 1 == yhat
+      ) %>%
+      filter(class == FALSE),
+    aes(shape = y, color = y),
+    stroke = 1.5, alpha = .9,
+    show.legend = FALSE,
+    fill = "red", size = 3
+  )
+```
+
+In figure \@ref(fig:logi-reg-2x) we see:
+
+- The **contours**^[Denoted by the gradient] of the logistic regression
+  conditional probabilities that $y$ is a square. As we move to the right, we
+  get more squares associated with $X_{1}$
+- The dotted line is naturally our threshold. We just take one of the contours
+  of the conditional probability function and we draw that line
+- Some of the point that are circles actually get classified as squares
+- We now see that the line can move in two dimensions to be the threshold. If
+  we had **three** predictor variables we would be shifting a plane around,
+  etc.
+
+## Fitting/estimation for the univariate case
+
+We use a **maximum likelihood function** to estimate the $\beta$s of our
+model. Assuming the data is IID:
+
+\begin{equation}
+  \text{maximize } L(\beta ; \mathbf y | \mathbf X) = \prod_{i=1}^n L(\beta ;
+  y_i | \mathbf x_i) (\#eq:likelihood-function)
+\end{equation}
+
+- We have a probability function the depends on the unknown parameters; the
+  probability of $\mathbf{y}$ conditional on the probability of $\mathbf{X}$,
+  and you think about *the data being fixed in that function*^[I.e. you're
+  solving for the coefficient] and you want to find the value of the parameter
+  $\beta$ which leads to the maximum of the function.
+
+To help understand the maths, let's consider the case with a one-parameter
+case, one predictor variable, and no intercept, so the calculus simplifies.
+
+\begin{align}
+  L(\beta;\mathbf y | \mathbf x) =&\prod_{i=1}^n \left( \frac{1}{1+e^{-x_i
+  \beta}} \right)^{y_i} \left(1- \frac{1}{1+e^{-x_i \beta}} \right)^{1-y_i}
+  (\#eq:mle-step-1)\\ % the likelihood function where 
+  \ell(\beta ; \mathbf y | \mathbf x) =&\sum_{i=1}^n y_i \log \left(
+  \frac{1}{1+e^{-x_i \beta}} \right) + (1-y_i) \log \left(1- \frac{1}{1+e^{-
+  x_i \beta}} \right) (\#eq:mle-step-2)\\
+  \frac{\partial}{\partial \beta} \ell(\beta ; \mathbf y | \mathbf x) =&
+  \sum_{i=1}^n y_i  \left( \frac{x_i e^{-x_i \beta}}{1+e^{-x_i \beta}} \right)
+  + (1-y_i) \left(\frac{-x_i}{1+e^{- x_i \beta}} \right) (\#eq:mle-step-3)\\
+  =&\sum_{i=1}^n x_i \left[ y_i - \left(\frac{1}{1+e^{- x_i \beta}} \right)
+  \right] = \color{blue}{\sum_{i=1}^n x_i [y_i - \hat
+  p_i(\beta)]} \notag
+\end{align}
+
+Explanation of the above equations:
+
+- Equation \@ref(eq:mle-step-1) is the likelihood function using the **fact
+  that $y$** is a binary variable and that it's probability distribution is
+  Bernoulli. The first term after the $\prod$ is the probability that $y = 1$
+  raised to the power of $y$. The second term is the probability that $y =
+  0$^[Which is simply the complement probability of $y$ being 1] raised to the
+  remaining $y$ observations.^[We are trying to maximise the product of all the
+  probability outcomes of the bernoulli distributed $\mathbf {y}$]
+  - $1 + e^{ - x_{i}\beta}$ is the conditional probability that $y = 1$
+    conditional on the value of $x$
+- Equation \@ref(eq:mle-step-2). The step we have taken here is to perform the
+  operation on the **log** likelihood as when using logs, the product becomes
+  a sum making things a bit easier. 
+- In equation \@ref(eq:mle-step-3), we take the **derivative** of the **log**
+  likelihood, simplify, and then arrive at the blue term which is the predictor
+  $x_{i}$ times the residual $y_{i} -
+  \underbrace{\hat{p}_{i}(\beta)}_{\substack{\text{conditional prob}\\\text{of
+  }y\text{conditional on}\\x_{i}}}$. This is a funciton of $\beta$ and we are
+  finding the **value of $\beta$** which equates this to 0^[Beta is calculated
+  using Newton Rhapson]
+
+## Logistic regression fitting for the multivariate case
+
+Newton-IRLS (equivalent) steps:
+
+\begin{align*}
+    \hat{\mathbf p}_t & = g^{-1}(\mathbf X \hat \beta_t)
+    & \ \text{ update probs.} \\
+    \mathbf W_t & = \text{diag}[\hat{\mathbf p}_t (1 - \hat{\mathbf p}_t)]  
+    & \ \text{ update weights} \\
+    \hat{\mathbf{y}}_t & = g(\hat{\mathbf p}_t) + \mathbf W_t^{-1}(\mathbf y -
+    \hat{\mathbf p}_t)
+    & \ \text{ update response}
+\end{align*}
+
+- The derivation is basically the same as for the univariate case but you use
+  **gradients** instead of **first derivatives** and **Hermitian matrices**
+  instead of **second derivatives**
+- In each step using Newton Rhapson you take the previous estimate of $\hat{\beta}$
+  and use it to compute the estimated probabilities for each observation
+- The estimated probabilities are used to compute weight for each observation
+  and we use the weights to solve a weighted least squares problem. Here the
+  weights are $\hat{\mathbf{p}}_{t}(1 - \hat{\mathbf{p}}_{t})$. This expression
+  is maximised at $\hat{\mathbf{p}}_{t} = \frac{1}{2}$. This means that the
+  closer the value is to 1/2 means that the points are the most difficult to
+  classify. These points get the largest weights in the weighted least squares
+
+We then update parameter estimate:
+
+\begin{align*}
+  \hat{\beta}_{t+1} = \arg \min_{\beta} (\hat{\mathbf{y}}_t - \mathbf X
+  \beta)^T \mathbf W_t (\hat{\mathbf{y}}_t - \mathbf X \beta)
+\end{align*}
+
+**Note**: larger weights on observations with $\hat p$ closer to 1/2, i.e. the
+most difficult to classify (***look for variations of this theme***)
+
+## Inference
+
+Because we have done MLE^[Maximum liklihood estimation] in
+\@ref(eq:likelihood-function), we can use classical statistical theory
+applicable to MLEs. For example, we can use [**asymptotic
+normality**](http://gregorygundersen.com/blog/2019/11/28/asymptotic-normality-mle/)
+for confidence intervals and tests.^[This is what the functions `summary, coef,
+confint, anova` are using in the background in `R`]
+
+## Caveats of logistic regression
+
+- If we can draw a perfect threchold line in our data to divide it perfectly,
+  logistic regression canno be used as the algorithm will diverge to
+  $\pm\infty$ when estimating $\hat{\beta}$
+  - This will always happen when $p > n$ for independent $p$ predictor
+    variables
+- Even if you have many observations, we can still have **biased estimates for
+  our coefficients**
