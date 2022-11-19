@@ -1,1 +1,234 @@
-/Users/kamalsacranie/Downloads/st310/coursework/in-class/02-week/09-seminar-2.Rmd
+# Seminar 2
+
+```{r, include=F}
+library(tidyverse)
+library(gapminder)
+library(broom)
+library(ggplot2)
+```
+
+Just setting up our model for later use:
+
+```{r, eval=T}
+gm2007 <- gapminder %>% filter(year == 2007)
+model_lm <- lm(lifeExp ~ gdpPercap, data = gm2007)
+model_lm
+```
+
+## `R` confindence interval
+
+A two tailed confidence intervil. It's nice to look at the confidence intervals
+becuase if the $p$-value is very small and you reject the null hypothesis, but
+it may also still be true that one end of the confidence interval gets **very
+close to 0**. This is more reveling than just looking at the $p$-value.
+
+```{r}
+coef(model_lm) # Tells us the coefficient of the model
+confint(model_lm, level = 0.90) # The level is 0.95 by default
+```
+
+## Models should capture systematic bias
+
+You want your predictive model to capture all of the **systematic variation**,
+i.e you do not want your model to be biased. This means that the residuals of
+your model appear random. This means there is no trend in the residuals because
+there is no systematic variance (bias)
+
+```{r}
+plot(model_lm)
+```
+
+> For basic plots in our, we can use the `plot()` function on a model which
+> returns 4 plots. One showing us the resiuals distribution. This is basically
+> a diagnostic plot. A negative trend in the residual means it's predicting too
+> high from a systematic manner. We want a flat line which shows no systematic
+> bias.
+
+- Ideally we want our residuals residuals to be all lined up on the diagonal
+  line of the `Normal Q-Q` plot which tells us that they are randomly normally
+  distributed.
+- We use the quantiles of normal distributions to create our confidence
+  intervals.
+- The `Residuals vs Leverage` shows us the size of the residual after
+  standardising (in standard deviations). The horizontal axis is `Leverage` and
+  tells us how much the entire model is influenced by that one data point
+
+### Nicer diagnostic plots
+
+We can use the `ggfortify` package to create nicer diagnostic plots.
+
+```{r, include=F}
+library(ggfortify)
+```
+
+```{r gm2007-diag, eval=T}
+autoplot(model_lm)
+```
+
+> Quite confused when looking at what is happening here. when I use
+> `ggfortify::autoplot` then it throws a namespace error because the function
+> doesnt exist. If I use `ggplot::autoplot` then it says model objects aren't
+> supported. My best guess is that `ggfortify` is acting as a "shim" of sorts
+> to enable `ggplot` to accept model objects in the function
+
+We can use the `broom` package's `glance` which tells us important info about
+tve model:
+
+```{r, eval=T}
+glance(model_lm)
+```
+
+> The `broom::tidy` function shows you a summary of just the $p$-values of the
+> model
+
+## Playing around with multiple regression
+
+```{r, include=F}
+library(palmerpenguins)
+```
+
+`palmerpenguins::penguins` is a dataset of penguins and their associated
+properties. We will use it here to play around with multi linear regression.
+
+```{r}
+head(penguins)
+```
+
+Setting up our model using a multiple regression formula:
+
+```{r, eval=T}
+peng_lm <- lm(
+  # predict body mass in grams form flipper length and species of penguin
+  body_mass_g ~ flipper_length_mm + species,
+  data = penguins
+)
+```
+
+### Inference {#penguin-multi-r-sq}
+
+Let's first inspect our adjusted $R^{2}$^[$R^2$ is a value which only decreases
+with when you add more predictor variables. This makes it a bad diagnostic
+because we could use a random number generator to make fake predictor variables
+which is absolute noise and the $R^2$ would increase. Adjusted $R^2$ takes into
+account the number of predictor variables and accounts for the fact that we can
+artificially inflate our $R^2$. Look at section \@ref(inflating-r-sq)] with
+`broom::glance`.
+
+```{r, eval=T}
+glance(peng_lm)
+```
+
+> Remember, `glance` just shows us $R^{2}$, but we can see all the important
+> results of the model with the `summary` function.
+
+There are other diagnostic measures which get penalised for the number of
+predictor variables you include (e.g. the AIC)^[A smaller value is better].
+
+Let's now look at our coefficients for the variables and see how significant
+they are:
+
+```{r, eval=T}
+tidy(peng_lm)
+```
+
+We see that the $p$-values are all very significant. Meaning our variable
+choice have a high predictive power?
+
+### Diagnostics
+
+Looking at our diagnostic plots with `autoplot`:
+
+```{r peng-model-diag, echo=F, eval=T}
+#| fig.cap='peng-model-diag',
+#| out.width="100%",
+#| fig.align="center",
+autoplot(peng_lm)
+```
+
+Comments on figure \@ref(fig:peng-model-diag) is:
+
+- In the leverage plot, we see that a couple of points have very high leverage
+  but they don't have a particularly high leverage and they are also not too
+  far from the 0 line^[Meaning that their residuals are not very large. When
+  you have variables denominated in money, that's when you worry about
+  leverage. If you think about penguins, it is unlikely to get an absolutely
+  massive penguins which skews your data]
+
+### Adding a polynomial in for fun to see if we can get better residuals
+
+Figure \@ref(fig:gm2007-reg) is our regular plot we have seen many times for
+our `gapminder` data.
+
+```{r gm2007-reg, echo=F, eval=T}
+#| fig.cap='gm2007-reg',
+#| out.height="30%",
+#| fig.align="center",
+augment(model_lm) %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  geom_line(aes(y = .fitted))
+```
+
+- Here we see a similarity between our plot here and the pattern in the
+  residuals in \@ref(fig:gm2007-diag) which is there is a concavity to both the
+  residual distribution and the data. This means there is still systematic risk
+
+Let's make our regression more complicated by adding a higher degree
+polynomial^[This is just for fun, it's unlikely that you would force your data
+to fit a line].
+
+```{r gm2007-poly, echo=T, eval=T}
+#| fig.cap='gm2007-poly',
+#| out.height="30%",
+#| fig.align="center",
+model_lm <- lm(lifeExp ~ gdpPercap + poly(gdpPercap, 3), data = gm2007)
+augment(model_lm) %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  geom_line(aes(y = .fitted))
+```
+
+The autoplots for figure \@ref(fig:gm2007-poly) are show in figure
+\@ref(fig:gm2007-aps). We see that the residuals have far less of the concave
+trend we saw before in figure \@ref(fig:gm2007-reg).
+
+```{r gm2007-aps, echo=F, eval=T}
+#| fig.cap='gm2007-aps',
+#| out.width="80%",
+#| fig.align="center",
+autoplot(model_lm)
+```
+
+## A note on `GGally`
+
+If we wanted to compare all possible 2D plots between all the variables in our
+dataset, we can use the `GGally::ggpairs` function to plot the relations
+between each variable.
+
+::: {.example #ggpairs name="`ggpairs`"}
+<br />\hfill\break
+
+In this example we will select some variables because it wouldn't make sense to
+plot every pair.
+
+```{r ggpairs, echo=T, eval=T}
+#| fig.cap='Using ggpairs',
+#| out.width="80%",
+#| fig.align="center",
+#| fig.pos = "H",
+library(GGally)
+dplyr::select(penguins, species, body_mass_g, flipper_length_mm) %>%
+  ggpairs()
+```
+
+:::
+
+---
+
+In figure \@ref(fig:ggpairs), `ggpairs` shows the distribution of the variable
+on the diagonal^[If it is categorical we see a histogram and if it is
+continuous we see a smooth distribution.].  
+At the top right, we see box plots for each species. This is because species is
+a categorical variable and the function `ggpairs` ***picks plots that suit the
+type of data best.***. This shows how the continuous variable `body_mass_g`
+differs in terms of the `species` categorical variables.

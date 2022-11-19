@@ -1,0 +1,210 @@
+# Seminar 4
+
+```{r, include=F}
+library(tidyverse)
+library(broom)
+library(modelr)
+library(GGally)
+```
+
+In this session we go through some methods for optimisation. We will focus on
+**gradient decent and stochastic gradient decent.**
+
+> Reminder: gradient decent is basically like skiing downhill and angling your
+> skis to the steepest direction at every point. Basically a stepwise process
+> which we iterate until we get to the minimum.
+
+## 1D smooth regression example
+
+Here we look at a 1-dimensional regression function which is non-linear. It's
+just a sin wave. We use this model to generate data. We generate data from a
+model that **we know well** so that when we apply a method to the data we
+**know if the results are accurate**. Because we know this is a sin wave, we
+know what it should look like. For example, in figure \@ref(fig:) where we use
+the standard `geom_smooth` function, we know that the line should be a sin wave
+so toward the end we see the lack of accuracy.
+
+## Example data
+
+Let's generate some sample data from a sin wave function:
+
+```{r, eval=T}
+sin_wave <- function(x) {
+  sin(4 * pi * x)
+}
+n <- 200 # our number of observations
+# randomly generating n beta distribution observations
+train1d <- data.frame(
+  x = rbeta(n, 1, 3)
+) %>% mutate(y = sin_wave(x) + rnorm(n, sd = .1))
+# Mutating our df to generate a sin wave using our function with some added,
+# normally distributed noise
+```
+
+- Basically here we create a `data.frame` of a random beta distribution^[More
+  info on the [beta
+  distribution](https://en.wikipedia.org/wiki/Beta_distribution)] which we then
+  mutate to fit a sin wave by using our function with some random noise and
+  assign that to our y variable
+
+```{r sin-wave-model, echo=F, eval=T}
+#| fig.cap='sin-wave-model',
+#| out.height="30%",
+#| fig.align="center",
+ggplot(train1d, aes(x, y)) +
+  geom_point() +
+  geom_smooth()
+```
+
+> The method that `ggplot` uses in figure \@ref(fig:sin-wave-model) is a local
+> regression which has a flexibility parameter
+
+## Fitting a linear regression with a polynomial transform of $x$
+
+```{r, eval=T}
+model_lm <- lm(y ~ poly(x, 5), data = train1d)
+train1d_grid <- data_grid(
+  train1d,
+  x = seq_range(c(x, 1), 500, expand = 0.05)
+)
+augment(model_lm, newdata = train1d_grid) %>%
+  ggplot(aes(x, y)) +
+  geom_point(data = train1d) +
+  geom_line(aes(y = .fitted))
+```
+
+- `poly` takes your predictor variable and creates a matrix which has
+  additional columns using the polynomial terms of $x$
+- `c(x, 1)` basically appends 1 to our vector `x` which is passed through from
+  our `train1d` model
+- `seq_range` just generates a sequence between the lowest and highest numbers
+
+This is no longer a local regression but rather a regression using the whole
+dataset.
+
+## Gradient descent
+
+Let's implement gradient descent by hand.
+
+> Hint: `model.matrix(model_lm)` can give you the predictor matrix
+
+### Step 1: write functions to output the least squares loss and its gradient
+
+```{r, eval=T}
+ls_loss <- function(x, y, beta) {
+  # beta is our coefficient vector
+  # We take the matrix of the predictor variables multiplier (matrix) by the
+  # coefficinets
+  ss_residuals <- sum((y - x %*% beta)^2)
+  return(ss_residuals)
+}
+```
+
+- `y - x %*% beta` comes from equation \@ref(eq:mat-lin-reg) and rearranging
+  for the $\epsilon$ which is what we are trying to minimise
+
+To get the gradient of our least squares loss function, we would just take the
+first derivative which gives us
+
+```{r, eval=T}
+ls_gradient <- function(x, y, beta) {
+  gradient <- -2 * t(x) %*% (y - x %*% beta)
+  return(gradient)
+}
+```
+
+- the expression being assigned to `gradient` is the first derivative of our
+  model $y - x\beta$
+- Because of the calculus, we have to transpose the $x$ matrix when we derive.
+  We do this with `t()` which transposes a matrix
+
+#### Seeing our functions in action
+
+Let's make sure our functions work. Lets first create a model matrix which has
+the correct dimensions and all the observations (`X`) and our output values
+`Y`.
+
+```{r, eval=T}
+X <- model.matrix(model_lm)
+Y <- train1d$y
+
+```
+
+- `model.matrix` creates a model matrix, e.g., by expanding factors to a set of
+  dummy variables and expanding interactions similarly.
+
+Then let's now use our functions:
+
+```{r, eval=T}
+b <- c(1, 1, 1, 1, 1, 1)
+print("Sum of squared residuals:")
+ls_loss(X, Y, b)
+print("Coefficients, i,e. our gradients:")
+ls_gradient(X, Y, b)
+```
+
+- Hence, we get the sum of the squared errors and our gradient
+
+> Note that this is merely asking for the parameter coefficients at `1, 1, 1,
+> 1, 1, 1`.
+
+### Step 2: write a loop to take multiple steps in the direction of the negative gradient, keeping step size fixed
+
+Let's run through the foundational logic for what we are going to do in our
+loop.
+
+First we will start at a `beta` which is a random coordinate in our space
+created by sampling a random normal distribution and then descend down the last
+beta to get `next_beta`.
+
+```{r, eval=T}
+last_beta <- rnorm(ncol(X))
+last_gradient <- ls_gradient(X, Y, last_beta)
+next_beta <- last_beta - 0.1 * last_gradient / sqrt(sum(last_gradient^2))
+```
+
+- the `sqrt(...)` is just us normalising the vector. I.e. making it a unit
+  vector. We can do this because **we only care about the direction**, not the
+  magnitude
+
+> Decreasing the size of our gradient by dividing seems clunky. It would surely
+> be better to do something like a binary search algorithm and keep having and
+> jumping to the values
+
+Our loop^[This is for demonstration purposes. We will make it more robust in
+the steps to come]:
+
+```{r, eval=T}
+last_beta <- rnorm(ncol(X))
+for (i in 1:10) {
+  last_gradient <- ls_gradient(X, Y, last_beta)
+  next_beta <- last_beta - 0.1 * last_gradient / sqrt(sum(last_gradient^2))
+  last_beta <- next_beta
+  print(ls_loss(X, Y, last_beta))
+}
+```
+
+### Step 3: write a function to step in the direction of the negative gradient until the loss function no longer decreases by a certain amount, keeping step size fixed
+
+```{r, eval=T}
+last_b <- rnorm(ncol(X))
+last_gradient <- ls_gradient(X, Y, last_b)
+current_b <- last_b - 0.01 * last_gradient / sqrt(sum(last_gradient^2))
+
+while (ls_loss(X, Y, last_b) > ls_loss(X, Y, current_b)) {
+  next_b <- current_b - 0.01 * last_gradient / sqrt(sum(last_gradient^2))
+  last_b <- current_b
+  last_gradient <- ls_gradient(X, Y, current_b)
+  current_b <- next_b
+}
+
+current_b
+```
+
+> THIS IS HIS CODE. IT'S SUCH BAD CODE I CBA TO FIX IT
+
+Yeah so we basically just do a standard for loop. The he gives is so badly
+coded but I put it in anyway.
+
+See [gradient descent](https://en.wikipedia.rg/wiki/Gradient_descent) for a
+more advanced way to choose your interval step size

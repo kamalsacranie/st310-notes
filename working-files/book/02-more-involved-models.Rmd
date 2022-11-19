@@ -1,1 +1,106 @@
-/Users/kamalsacranie/Downloads/st310/coursework/in-class/01-week/02-more-involved-models.Rmd
+---
+author: "Kamal Sacranie"
+numbersections: true
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: bookdown::pdf_document2
+---
+
+# Candy rankings
+
+```{r, include=F}
+library(plotly)
+library(broom)
+library(fivethirtyeight)
+library(tidyverse)
+```
+
+It's always good practice to start by visualising some of your data. For fun
+let's just fit a simple linear model to this dataset:
+
+```{r}
+cr_lm <- lm(pricepercent ~ winpercent, data = candy_rankings)
+tidy(cr_lm)
+```
+
+```{r}
+augment(cr_lm) %>%
+  ggplot(aes(x = pricepercent, y = winpercent)) +
+  geom_point() +
+  geom_line(aes(y = .fitted))
+```
+
+- Nice tip with `geom` functions is that because it take in the object the
+  previous function returns, you can keep the `x` value the same and reassign
+  the `y`
+
+## Adding a categorical variable to our model
+
+```{r}
+cr_lm_cat <- lm(winpercent ~ pricepercent + chocolate, candy_rankings)
+tidy(cr_lm_cat)
+```
+
+- Here in the `formula` argument, we add the categorical variable `chocolate`
+- This becomes a dummy variable for our regression model (`chocolateTRUE`)
+
+Let's now represent this new categorical variable on our plot through the use
+of colour:
+
+```{r}
+augment(cr_lm_cat) %>%
+  ggplot(aes(
+    x = pricepercent,
+    y = winpercent,
+    color = chocolate,
+    shape = chocolate,
+    linetype = chocolate
+  )) +
+  geom_point() +
+  geom_line(aes(y = .fitted))
+```
+
+- So in the `aes` function we have a whole load of arguments which take a set
+  of true or false values to boolean index the characteristics of the data
+
+## Adding a continuous predictor and creating a 3D plot
+
+A common package used to create 3D plots is `plotly`. 
+
+```{r}
+candy3d <- plotly::plot_ly(candy_rankings,
+  x = ~pricepercent, y = ~sugarpercent,
+  z = ~winpercent,
+  type = "scatter3d"
+)
+```
+
+> This is a perfect example of how `R` is so good out the box for data
+> visualisation
+
+We can fit our regression plane in this three dimensional space:
+
+```{r}
+cr_lm_sugar <- lm(
+  winpercent ~ pricepercent + sugarpercent,
+  data = candy_rankings
+)
+
+xy_plane <- expand.grid(0:100, 0:100) / 100
+ps_plane <- xy_plane %>%
+  rename(pricepercent = Var1, sugarpercent = Var2)
+
+lm_plane <- augment(cr_lm_sugar, newdata = ps_plane)
+lm_matrix <- matrix(lm_plane$.fitted, nrow = 101, ncol = 101)
+
+candy3d %>%
+  add_surface(
+    x = ~ (0:100) / 100,
+    y = ~ (0:100) / 100,
+    z = ~lm_matrix
+  )
+```
+
+- The `expand.grid` function creates a data frame from all combinations of the
+  supplied vectors or factors
+- We then rename the variable of the plane with `rename`
+- We then see the `augment` function in use 

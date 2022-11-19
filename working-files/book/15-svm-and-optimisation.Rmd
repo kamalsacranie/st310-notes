@@ -1,0 +1,4 @@
+# Support vector machines and beginning optimisation
+
+I may not take notes on this becuase it's very theoretical and I CBA. I might
+come back and do this after the seminar

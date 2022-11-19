@@ -1,1 +1,51 @@
-/Users/kamalsacranie/Documents/lse/third-year/core-courses/fm300/notes/lt/working-files/css/style.css
+/* =============Predefined CSS================= */
+
+p.caption {
+  color: #777;
+  margin-top: 10px;
+}
+p code {
+  white-space: inherit;
+}
+pre {
+  word-break: normal;
+  word-wrap: normal;
+}
+pre code {
+  white-space: inherit;
+}
+
+pre.numberSource code > span > a:first-child::before {
+  left: -0.1em;
+}
+
+/* This is for sizing our images correctly in the browser*/
+img {
+    width: 100%;
+    max-height: 600px;
+    object-fit: contain;
+}
+
+/*Example block styling*/
+div.example {
+  border-radius: 20px;
+  background: beige;
+  padding: 20px;
+  border-width: thick;
+  border-color: darkgreen;
+  border-style: solid;
+}
+
+/*quoteblock styling*/
+blockquote {
+  opacity: 1 !important;
+  padding: 1em !important;
+  margin: 1em 2.8em !important;
+  background: lightgrey;
+  border-left: 4px solid black !important;
+  border-color: black !important;
+  color: black !important;
+}
+blockquote > p {
+  margin: 0 !important;
+}

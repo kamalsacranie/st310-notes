@@ -1,1 +1,258 @@
-/Users/kamalsacranie/Downloads/st310/coursework/in-class/01-week/01-introduction-to-r.Rmd
+---
+author: "Kamal Sacranie"
+numbersections: true
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: bookdown::pdf_document2
+---
+
+# (PART) Week 1 {-}
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Simple plotting with `ggplot`
+
+What is the association between GDP and life-expectancy:
+
+```{r, echo=FALSE}
+library(gapminder)
+library(tidyverse)
+```
+
+## Using `ggplot`
+
+::: {.example #gdp-life-exp name="GDP vs life expectancy"}
+<br />\hfill\break
+
+::: {.minipage latex-data=""}
+
+```{r ggplottest, fig.cap="The cars data."}
+#| fig.pos = "!H",
+ggplot(
+  # Piping to mutate to boolean index the data
+  gapminder %>% mutate(
+    # Simple boolean logic here and passing it as a kwarg to the mutate
+    # function
+    indicator = (country == "United Kingdom")
+  ),
+  aes(x = gdpPercap, y = lifeExp)
+) +
+  # How the fuck has indicator now got local scope. Was it created by the
+  # mutate fucntion. But even then? it's not returning anything, where is
+  # idnicator being assigned
+  geom_point(aes(color = indicator))
+```
+
+:::
+
+:::
+
+---
+
+- `aes` stands for aesthetic and creates an aesthetic mapping between our
+  dataset and the aesthetic properties of the plot. It's a function which is
+  passed as an in place arg called a `mapping` function
+- `aes` takes an x variable and y variable form our dataset as arguments
+- `geom_point` is one of the many plots that come with `ggplot` and plots a
+  point plot
+
+> The `aes` argument which goes in the first `ggplot` function applier for the
+> whole "canvas", whereas the ones for the secondary functions only apply to
+> that specific function. So **if you want to apply colour to only the
+> regression line, you do the `aes` in the `geom_smooth` function**
+
+In the above example we use the `%>%` operator (provided by the package dyplr).
+
+This is maybe the only good thing about R that I have encoutered. It works
+similarly to the pipe character in bash. It takes the return from the last
+function pipes it into the first argument of the next function.
+
+> For the record, it is insanely retarded that we can just pass through the
+> columns of `gapminder` as if they were variables. We haven't assigned them or
+> anything. It's also insane to me that we use ggplot and then ADD A PLOT?? WTF
+> does that even mean. Why are these two objects able to be added. How is there
+> not a type error
+
+## The pipe `%>%`
+
+As previously mentioned... the only good thing about `R`. Just plugs the data
+into the first argument of the next function.
+
+::: {.example #pipe-vs-normal name="Piping to a function"}
+<br />\hfill\break
+
+```{r}
+gapminder %>% nrow()
+```
+
+is the same as
+
+```{r}
+nrow(gapminder)
+```
+
+:::
+
+---
+
+This is often what `R` uses to stack things. It's basically becasue `R` is made
+by people who are too retarded to read regular nested code or even just regular
+lines of code.
+
+## Filtering for a value in column (basically boolean indexing)
+
+```{r}
+# notice that we can pass a straight int here. R knows the type in the column
+base_plot <- ggplot(
+  # Easier to see here that mutate basically adds a column with a boolean value
+  # showing whether it's the UK or not
+  filter(gapminder, year == 2007) %>%
+    mutate(indicator = (country == "United Kingdom")),
+  aes(x = gdpPercap, y = lifeExp)
+) + # The plus is similar to the pipe, it is introduces by ggplot and basically
+  # allows you to build layers on your plot
+  geom_point(aes(color = indicator))
+```
+
+- The `+` is like ggplot's version of the pipe. It's used to layer graphs
+- `indicator` is accessable because it's a column of our `gapminder` data which
+  is being pushed through with our plus
+
+```{r}
+base_plot +
+  geom_smooth()
+```
+
+- The line curves around the points and fits locally to the points
+- The gray area is the confidence intreval of the fit line
+
+## Model objects
+
+Everything is an object in `R` and our assignment operator is `<-`:
+
+```{r}
+gm_2007 <- gapminder %>%
+  filter(year == 2007)
+```
+
+Great so we can use that everywhere in this `R` file. For example, we can use
+the `lm` function for fitting models
+
+::: {.example #lm-basic-fit name="A basic model function use"}
+<br />\hfill\break
+
+```{r}
+gm_lm <- lm(lifeExp ~ gdpPercap, data = gm_2007)
+```
+
+:::
+
+---
+
+> A common way for model funciton to work in `R` is to require the assignment
+> of the lefthand side and the right hand side variables; we see this in
+> \@ref(exm:lm-basic-fit) with the use of the `~`. On the left of the tilde we
+> have the dependent (outcome) variable and on the right we have the
+> independent (predictor) variable
+
+In \@ref(exm:lm-basic-fit) `lm` stands for linear model (a regression) and is
+an object which contains all the information for our regression. When you print
+it on its ones, there isn't much you can do
+
+```{r}
+summary(gm_lm)
+residuals(gm_lm) # the difference in the predicted values and the actual
+predict(gm_lm)
+```
+
+- `summary` is a builtin function which displays a summary **of any model
+  object in `R`**
+- This also shows us standard errors, p-values, etc.
+
+> Something I find weird here is that all the data we need is inside the `lm`
+> object but instead of using a method to produce the result like I would
+> expect, we have to pass it to another function
+
+## `broom`
+
+`broom` is just a library that provides nice out of the box rendering for `R`'s
+model objects.
+
+```{r}
+library(broom)
+```
+
+```{r}
+tidy(gm_lm)
+```
+
+- The `broom::tidy` function is really nice for making tables look good
+- Don't think it works in latex though
+
+We also have the `broom::glance` function which shows our most important values
+at a glance. You can also compare two models with it:
+
+```{r}
+glance(gm_lm)
+```
+
+The last main fucntion from `broom` is `augment`. This gives us the original
+dataset back plus the extra rows like standard errors for residuals, residuals,
+etc. This function is really useful for plotting the results of the model
+
+```{r}
+augment(gm_lm) %>%
+  ggplot(aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  # the geom line adds a line to the plot on top of the already existing plot,
+  # i.e. we can give it a different x and y to plot via the aes which returns a
+  # mapping
+  geom_line(aes(x = gdpPercap, y = .fitted))
+```
+
+- Note here how ggplot basically crease the canvas for the plot. Then you layer
+  on a point distribution using the data, then you layer on a line using the
+  data and specifying the variable you want. In this case `.fitted` will give
+  us all the points on the fitted line. This is the same as using ggplot's
+  `geom_smooth` function. We are just doing it the long way around
+
+## Subbing out function for e.g. `loess`
+
+The most important takeaway here is the idea of **model flexibility**. We have
+made a robust programme which let's us swap in and out functions. For example,
+let's use the `loess` function to plot the local extimation line which is the
+default given by ggplot's `geom_smooth`
+
+```{r}
+gm_loess <- loess(lifeExp ~ gdpPercap, data = gm_2007, span = .5)
+summary(gm_loess)
+```
+
+- Again, we see the tilde notation for specifying LHS and RHS
+- An interesting note. When I ran what I thought was known as the `tidy`
+  **function**, `R` threw an error mentioning loess object doesn't have the
+  method `tidy`. I.e. methods are defined in objects but somehow they are
+  called with function notation.
+
+::: {.example #loess name="loess example"}
+<br />\hfill\break
+
+```{r}
+augment(gm_loess) %>%
+  ggplot(aes(gdpPercap, lifeExp)) +
+  geom_point() +
+  geom_line(aes(gdpPercap, .fitted))
+```
+
+:::
+
+---
+
+### What is `loess` actaully doing
+
+`loess` stands for "locally estimated scatter-plot smoothing". If we look at
+the output of exmaple \@ref(exm:loess), we see that it is looking at the local
+points and approximating them. `loess` has some options, for example:
+
+- `span`: tells the function how localised to make its approximation

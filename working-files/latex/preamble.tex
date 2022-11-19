@@ -2,13 +2,15 @@
 % Making headings start at same place at first lettter
 \usepackage{titlesec}
 \titlelabel{\llap{\thetitle\quad}}
+
 \usepackage{booktabs}
+% To color table cells
+\usepackage{colortbl}
 % Footnotes fixed to bottom
 \usepackage[bottom]{footmisc}
 \usepackage{multicol}
 \usepackage[edges]{forest}
 \usepackage{fancyhdr}
-\usepackage{titlesec}
 \usepackage{cancel}
 % Allows us to have subfigures
 \usepackage{subfig}
@@ -22,7 +24,7 @@
 \usetikzlibrary{trees}
 \usetikzlibrary{backgrounds}
 
-% Setting our mono code to use fira code
+% Setting our mono code to Hasklug (must be install on system)
 \usepackage{fontspec}
 \setmonofont[
 	Contextuals={Alternate}
@@ -76,9 +78,6 @@
 }
 
 
-% Changing the background color of our code blocks
-% \colorlet{shadecolor}{magenta!20!white}
-% \definecolor{code}{RGB}{178,178,178}
 % Defining our shadecolor (used fo shading code blocks usually)
 \definecolor{code}{RGB}{1,22,80} % This is how you define a color in latex
 \colorlet{shadecolor}{code} % redefining our shadecolor to be code color

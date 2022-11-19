@@ -272,3 +272,17 @@ tables/matrices/vectors.
 ```{r}
 rbind(<object-1>, <object-2>)
 ```
+
+## Functions
+
+In `R` you create a function using the `function` keyword and denote the
+parameters in brackets. You must then assign this function to a variable to be
+stored for future use:
+
+```{r}
+my_func <- function(a, b, c) {
+  reccrn(a * b * c)
+}
+```
+
+We then call our function and pass in the arguments as usual `my_func(arg1, ...)`

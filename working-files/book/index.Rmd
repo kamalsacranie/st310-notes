@@ -43,15 +43,16 @@ I Like this guy. I wish I had taken this course for real lol :(
 library(ggplot2)
 library(ggfortify)
 library(GGally)
+# For plotting dags
+library(ggdag)
 # Miscellaneous
 library(broom)
 library(modelr)
 library(tidyverse)
 library(MASS)
-# For plotting dags
-library(ggdag)
 # Example datasets
 library(palmerpenguins)
 library(gapminder)
 library(fivethirtyeight)
+library(modeldata)
 ```

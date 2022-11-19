@@ -1,1 +1,289 @@
-/Users/kamalsacranie/Downloads/st310/coursework/in-class/02-week/05-regression-a.Rmd
+# (PART) Week 2 {-}
+
+# Regression part I
+
+```{r, include=F}
+library(tidyverse)
+library(gapminder)
+library(broom)
+```
+
+## Estimation
+
+We begin by fitting our data to our standard linear regression model using
+`lm`:
+
+```{r gapminder-scatter, fig.cap="GGPlot point plot", eval=T}
+gm2007 <- filter(gapminder, year == 2007)
+gm_lm <- lm(lifeExp ~ gdpPercap, data = gm2007)
+print(gm_lm)
+ggplot(gm2007, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  geom_smooth(method = "loess")
+```
+
+### Regression breakdown
+
+However, let's break down what the `lm` function does under the hood. The basic
+regression model is:
+
+\begin{equation}
+  \hat{\beta}_{1} = \text{cov}(x,y)\dfrac{\sigma_{y}\sigma_{x}}{\sigma_x}
+  (\#eq:beta)
+\end{equation}
+
+- $y$ goes in the numerator because if you outcome variable *has a larger
+  spread*^[i.e. a higher standard deviation], then the slop has to be steeper
+- $x$ is in the denominator because the horizontal axis variance leads to the
+  line being less steep
+
+We can calculate equation \@ref(eq:beta) by hand in $R$ as follows^[This is
+also a "tidyverse way" of calculating statistics]. First the regular way:
+
+```{r}
+cor(gm2007$gdpPercap, gm2007$lifeExp)
+sd(gm2007$gdpPercap)
+```
+
+- We see that we have to pass in our column for every summary statistic
+
+`tidyverse` provides function which lets us only pass the data through one and
+then essentially makes each column into a variable the function can access. 
+Basically syntactical sugar:
+
+```{r}
+summarize(gm2007,
+  cor_xy = cor(gdpPercap, lifeExp),
+  sd_x = sd(gdpPercap),
+  sd_y = sd(lifeExp),
+  hat_beta1 = cor_xy * sd_y / sd_x
+)
+```
+
+- The usefulness of summarise is that you can do this for any function applied
+  to your varaibles is that you can do this for any function applied to your
+  varaibles
+- `summarize` basically creates those variables which we passed in as kwargs
+- Note that we can just calculate beta there and then within the function using
+  the previously defined variables in the call of the function
+- `hat_beta1` is the same slope as calculated by `lm`
+
+To calculate the intercept, we know that the regression line passes through
+
+\begin{align*}
+  (\overline{x},\overline{y})
+\end{align*}
+
+- i.e. the line passes through the point that is the **mean of the dataset**
+
+which means that $\overline{y}$ is calculated with the estimated slope,
+intercept and $\overline{x}$. So we can rearrange for $\hat{\beta}_0$:
+
+\begin{equation}
+  \begin{aligned}
+    \overline{y}&= \hat{\beta}_0 + \hat{\beta}_1 \overline{x}\\
+    \hat{\beta}_0&= \overline{y} - \hat{\beta}_1 \overline{x} (\#eq:intercept)
+  \end{aligned}
+\end{equation}
+
+We can of course do this again with the `summarise` function:
+
+```{r}
+summarise(gm2007,
+  cor_xy = cor(gdpPercap, lifeExp),
+  sd_x = sd(gdpPercap),
+  sd_y = sd(lifeExp),
+  hat_beta1 = cor_xy * sd_y / sd_x,
+  xbar = mean(gdpPercap),
+  ybar = mean(lifeExp),
+  hat_beta0 = ybar - hat_beta1 * xbar
+)
+```
+
+> You should be able to reproduce these basic regression formulas by heart
+
+We can the give a numerical value of certainty ($p$-value) which tells us how
+certain we are that our model is correct. This is done by first calculating the
+standard errors of the slop $\hat{\beta}_{1}$:
+
+\begin{equation}
+  \begin{aligned}
+    \text{SE}(\hat \beta_1) = \sqrt{\frac{\sigma^2}{\sum_{}((x_i - \bar x)^2)}}\\
+    \text{se}(\hat \beta_1) = \frac{\hat \sigma}{\sqrt{\sum_{}((x_i - \bar
+    x)^2)}}
+    (\#eq:se-beta1)
+  \end{aligned}
+\end{equation}
+
+- The $\sigma^{2}$ here represents the variance of the $\epsilon$s in the model
+  which are irreducible
+- **If there is more variance in our errors** then the standard error
+  increases^[You can think of this as how far
+  away the points are from our regression line]
+- The denominator here is the **how much spread there is in the $x$ variable**.
+  Think of "how much information there is in the $x$ variable". If the $x$
+  values are all very close to each other **there is lower variance**^[In this
+  instance, information is the recirical of variance here] which means there is
+  less information in our $x$ variable so our standard error increases
+- I like to think of it like a standardised proportion of $\epsilon$ variance
+  to how much variance there is in our $x$ variable^[Like, if there is low
+  variance in our $x$ we would need a low variance in our errors in order for
+  the estimated coefficient to be a good predictor]
+
+If we look at the summary of the linear model which was produced by
+`R`^[rendered here with the `tidy` function instead of `summary` because it
+looks nicer]
+
+```{r}
+tidy(gm_lm)
+```
+
+- The value we are looking at the estimated coefficients and their standard
+  errors. We want to see if we can calcualate, using equation
+  \@ref(eq:se-beta1), the standard error of the estimated coefficient^[In the
+  column `estimate`]
+
+We need to estimate $\sigma^{2}_{\epsilon}$ by using the standard error of the
+residuals (RSE)^[This is because the errors are not continuous data and we only
+have a finite number of points so we need an estimator]:
+
+\begin{align}
+  \hat \sigma = \text{RSE} = \sqrt{\frac{\text{RSS}}{n-2}}
+  (\#eq:rse)
+\end{align}
+
+- Where the RSS is the sum of the squared differences between our model fit
+  line and the points?
+
+We can calculate the RSS via the `broom` packages function `augment` which adds
+the residual for each element. We can then sum all of those squared residuals
+to get RSS to calculate our $\text{ RSE } = \hat{\sigma}$ using equation
+\@ref(eq:rse):
+
+```{r}
+augment(gm_lm) %>%
+  summarise(
+    RSS = sum(.resid^2), # Summing all the squared residuals
+    RSE = sqrt(RSS / (n() - 2)),
+    # Calculating standar error
+    std.err = RSE / sqrt(sum((gdpPercap - mean(gdpPercap))^2))
+  )
+```
+
+- The function `n` here calculates the sample size of our group
+
+### Regressing over the whole dataset and not just the `gm2007` subset using `group_by`
+
+We can use the entire dataset and **group by a given variable** with the
+following:
+
+```{r, eval=T}
+gapminder %>%
+  group_by(year) %>%
+  summarise(
+    cor_xy = cor(gdpPercap, lifeExp),
+    sd_x = sd(gdpPercap),
+    sd_y = sd(lifeExp),
+    hat_beta1 = cor_xy * sd_y / sd_x,
+    xbar = mean(gdpPercap),
+    ybar = mean(lifeExp),
+    hat_beta0 = ybar - hat_beta1 * xbar
+  ) %>%
+  knitr::kable(booktabs = T)
+```
+
+- `group_by` basically slices and dices our dataset into the group we provide
+  and then the summarise allows us to run the summary statistics on each one of
+  those groups
+- The output here shows us the `hat_beta1` isn't very stable over time
+
+## Model diagnostics
+
+Diagnostics for regression include $R^{2}$ and the RSE.
+
+### $R^{2}$
+
+#### Simple linear regression $R^{2}$
+
+The `glance` function from the `broom` package outputs the $R^{2}$ and adjusted
+$R^{2}$ for a model:
+
+```{r, eval=F}
+glance(gm_lm)
+```
+
+If we want to calculate this ourself, we need to use the $R^{2}$ calculation
+for a SIMPLE linear regression^[One intercept and one dependent variable:
+$Y=\beta_0+beta_1x_1$] which is:
+
+\begin{align*}
+  R^{2} = \text{cor}(x,y)^{2}
+\end{align*}
+
+- I.e. it's just the correlation of our two variables squared. This is only in
+  the case of a SIMPLE REGRESSION
+
+We can easily calculate this with `R`:
+
+```{r}
+cor(gm2007$gdpPercap, gm2007$lifeExp)^2
+```
+
+#### General linear regression $R^{2}$
+
+The general formula for $R^{2}$ is:
+
+\begin{align}
+  R^{2} = 1 - \dfrac{RSS}{TSS}
+\end{align}
+
+- That is, $R^{2}$ is the proportion of the RSS to the TSS^[Total sum of
+  squares].
+
+> We commonly call this the explanation power of our model. It is the
+> proportion of our sum of squares of residuals to the total sum of squares of
+> our $Y$ variable, i.e. all the values less their means (i.e. the "centred"
+> values) squared and the summed up
+>
+> \begin{align*}
+    TSS = \sum(y - \overline{y})^{2})
+  \end{align*}
+
+In `R` we can just calculate this with `tidyverse::augment`^[Giving us the
+residuals] and `summarise`:
+
+```{r}
+augment(gm_lm) %>%
+  summarise(
+    RSS = sum(.resid^2),
+    TSS = sum((lifeExp - mean(lifeExp))^2),
+    R2 = 1 - RSS / TSS
+  )
+```
+
+### Pattern searching in residuals
+
+We want to look for patterns in residuals because of variance-bias
+decomposition from equation \@ref(eq:bias-var-to). We have parts of errors that
+are systematic (bias) and idiosyncratic (variance). In any given problem there
+is inherent variability but we should be controlling for as much bias as
+possible. We do this by *looking for pattern in the residuals* as systemic
+errors can show up in residuals.
+
+Let's plot the residuals to see if we notice anything:
+
+```{r, eval=T}
+augment(gm_lm) %>%
+  ggplot(aes(gdpPercap, .resid)) +
+  geom_point()
+```
+
+- This plot shows the residuals for the 
+- This plot can show us some serious problems we can see that there is **one
+  large cluster of points on the left side and a trend** on the left side of
+  the plot which clearly has a downward sloping trend. The residual are
+  becoming more negative as `gdpPercap` increases.
+
+> REMINDER: residuals are the DIFFERENCE between the actual values, and the
+> values our model spits out. I.e. the distance of the points from the line of
+> best fit. Because our line is essentially a continuous set of points.

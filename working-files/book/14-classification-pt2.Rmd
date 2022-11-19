@@ -1,0 +1,247 @@
+# (PART) Week 4 {-}
+
+# Classification part 2 and support vector machines
+
+Here we consider another method for classification having just considered
+logistic regression. Logistic regression and Support Vector Machines (SVMs)
+both have **linear decision boundaries**. For logistic regression we observe
+this the following linear decision boundaries:
+
+\begin{align*}
+  \hat y = 1 \iff \hat p > g^{-1}(c) \iff \mathbf x^T \beta > c
+\end{align*}
+
+- In logistic regression, getting classified as 1 was equivalent to having a
+  fitted probability which is above some threshold $g^{-1}(c)$ which is
+  equivalent to the **predictors being in a certain half space**^[One one side
+  of a hyperplane you classifications of 1 and on the other side you have
+  classifications of 0]
+
+We also know that logistic regression fails if the classes **are perfectly
+separable**. This raises the question as to how we classify perfectly separable
+data.
+
+## Notation for linear classification
+
+Define a **linear classifier** $f(\mathbf{x})$ by
+
+\begin{align*}
+  f(\mathbf{x}) = \beta_{0} + \mathbf{x}^{T}\beta
+\end{align*}
+
+- For a given observation $\mathbf{x}$ is a vector with $p$ entries
+- The $p$ dimensional space can be divided into two parts depending on if the
+  product can be divided into two parts
+
+With the threshold defined, we can define a function which is just +/- 1 on
+either side of the threshold. We call this our decision rule:
+
+\begin{align*}
+  G(\mathbf{x}) = \text{sign}[f(\mathbf{x})]
+\end{align*}
+
+By changing our assignments to +/- 1 instead of 1 and 0, we can now get an
+expression for a general **misclassification** which is true when the predicted
+value and the actual value have different signs:
+
+\begin{align*}
+  \text{Misclassification} \leftrightarrow y\times G(\mathbf{x}) < 0
+\end{align*}
+
+## Geometric intuition for the separable case
+
+When deciding where to place our threshold line, we want to **choose the line
+which maximises distance**. By distance we mean the distance between all
+points.
+
+```{r linear-classifiers, echo=FALSE, eval=T}
+#| out.width="40%",
+#| fig.cap='linear-classifiers',
+#| fig.show='hold',
+#| fig.align="center",
+knitr::include_graphics(
+  c(
+    "./assets/14-classification-pt2/img/islr9.2.png",
+    "./assets/14-classification-pt2/img/islr9.3.png"
+  )
+)
+```
+
+### Maximising the "margin" (separable case)
+
+We can define the distance between a point to a line as the **distance between
+that point and the closest point on the line**. I.e. we define the distance
+from $\mathbf{x}$ to the decision boundary $\{\mathbf{z}:f(\mathbf{z}) = 0\}$
+as
+
+\begin{align*}
+  \min \|\mathbf{x} - \mathbf{z}\|\text{ s.t. }f(\mathbf{z}) = 0
+\end{align*}
+
+The distance from $\mathbf{x}$ to the line/hyperplane defined by
+$f(\mathbf{x})$ is given by the ratio
+
+\begin{align*}
+  \dfrac{|f(\mathbf{x})|}{\|\beta \|}
+\end{align*}
+
+- This is the ratio of the function $f$ to the coefficients in $f$ and leaving
+  out the coefficient term.
+
+We **want to maximise this** which is given by
+
+\begin{align*}
+  \underset{1 \leq i \leq n}\min \dfrac{|f(\mathbf{x}_{i})|}{\|\beta \|}
+\end{align*}
+
+We could make the **margin infinitely large** by send the decision boundary to
+$\infty$ which would be as far away from the data as possible. For this reason,
+we must implement the constraint that we will **only look at the lines which
+have zero classification errors**. Subject to that constraint we will then
+maximise:
+
+\begin{align*}
+  &&\max\left[\underset{1 \leq i \leq n}\min
+  \dfrac{|f(\mathbf{x}_{i})|}{\|\beta \|}\right]\\
+  &\text{s.t.}:&\\
+  &y_{i}f(\mathbf{x}_{i}) > 0\text{ for }1 \leq i \leq n
+\end{align*}
+
+### Reformulating our optimisation problem
+
+**Exercise**: convince yourself this is equivalent to
+
+\begin{align*}
+  \max_{M, \beta} M\\
+  \text{s.t. }  y_i f(\mathbf x_i) / \| \beta \| \geq M  \text{ for } 1 \leq i
+  \leq n
+\end{align*}
+
+- We have introduced a new variable, $M$, to optimize over which represents the
+  margin
+- We are maximising over both $M$ and $\beta$
+- This optimisation pro balm also **does not depend on the units** so we can
+  arbitrarily rescale this expression to make something in the expression = 1
+
+Then, use re-scaling to show it's equivalent to
+
+\begin{align*}
+  \text{minimize } \| \beta \|\\
+  \text{s.t. }  y_i (\beta_0 + \mathbf x_i^T \beta) \geq 1  \text{ for } 1 \leq i
+  \leq n
+\end{align*}
+
+Since $\text{minimize } \| \beta \| \leftrightarrow \text{minimize } \| \beta
+\|^2$ this is a quadratic program with linear inequality constraints
+
+> We have basically taken sever steps to recast our problem into a format which
+> allows for **convex optimisation**. This is called a "quadratic programme
+> with linear optimal constraints". Convex optimisation guarantees that if we
+> find an optimum it is for sure the global optimum and can give us predictable
+> rates of conversion to the global optimum.
+
+## The non-seperable case
+
+Let us now extend our optimisation problem to a case where data is not
+separable by a hyperplane. To do this, we allow a "budget" for constraint
+violations^[We will call these "slack variables"].
+
+If observation $i$ is misclassified then let $\xi_i/\|\beta\|$ be its distance
+from the boundary. Solve
+
+\begin{align*}
+  \text{minimize } \| \beta \|^2\\
+  \text{s.t. for } 1 \leq i \leq n,\\
+  y_i (\beta_0 + \mathbf x_i^T \beta) \geq 1 - \xi_i\\
+  \text{ where }\xi_i \geq 0, \sum \xi_i \leq C
+\end{align*}
+
+- We want to **bound the total amount of slack**. We can think of this budget
+  as a tuning parameter which allows for more or less classifications.
+- The less slack the more you are fitting your model to the specific data
+  you're looking at
+
+**Complexity**: $C$ is a tuning parameter (more about this in slide after next
+one)
+
+### Bias-variance trade-off
+
+There is a wider margin boundary where we allow more misclassifications. In
+this case there are more support vectors. This comes with more points to
+support the model which results in a higher bias. This, in turn, results in
+less variance. As you decrease the budget, you require the model to classify
+more of the training data which means you are increasing the model complexity
+and risk overfitting (figure \@ref(fig:boundary-tightness-bvto)).
+
+```{r boundary-tightness-bvto, echo=F, eval=T}
+#| fig.cap='boundary-tightness-bvto',
+#| out.width="40%",
+#| fig.show='hold',
+#| fig.align="center",
+knitr::include_graphics(
+  c(
+    "./assets/14-classification-pt2/img/2022-02-16-14-28-06.png",
+    "./assets/14-classification-pt2/img/2022-02-16-14-28-12.png"
+  )
+)
+```
+
+## Non-linear classification boundaries
+
+What happens if we have non-linear boundries we need to classify like in the
+subfigures in \@ref(fig:circle-eg)?
+
+```{r circle-eg, eval=T, echo=F}
+#| fig.align='center',
+#| fig.show="hold",
+#| out.width="50%",
+require(tidyverse)
+n <- 800
+circle <- data.frame(
+  x1 = 1 - 2 * runif(n),
+  x2 = 1 - 2 * runif(n)
+) %>%
+  mutate(
+    y = factor(
+      rbinom(n, 1, 9 / 10 - 8 * as.numeric(sqrt(x1^2 + x2^2) > .7) / 10)
+    )
+  )
+circle_plot <-
+  ggplot(circle, aes(x1, x2)) +
+  geom_point(aes(shape = y, fill = y),
+    color = "black", size = 2, stroke = 1,
+    show.legend = FALSE, alpha = .4
+  ) +
+  scale_shape_manual(values = c(21, 22)) +
+  scale_fill_viridis_d(direction = 1, end = .8)
+circle_plot
+
+n <- 1600
+circle <- data.frame(
+  x1 = 1 - 2 * runif(n),
+  x2 = 1 - 2 * runif(n)
+) %>%
+  mutate(
+    y = factor(
+      rbinom(
+        n,
+        1,
+        9 / 10 - 8 * as.numeric(1 - x1 / 4 - x1^2 + 5 * x1 * x2 > .5) / 10
+      )
+    )
+  )
+circle_plot <-
+  ggplot(circle, aes(x1, x2)) +
+  geom_point(aes(shape = y, fill = y),
+    color = "black", size = 2, stroke = 1,
+    show.legend = FALSE, alpha = .4
+  ) +
+  scale_shape_manual(values = c(21, 22)) +
+  scale_fill_viridis_d(direction = 1, end = .8)
+circle_plot
+```
+
+We get around this problem using **kernel methods**. We will be able to fit
+decision boundary curves!
+
+

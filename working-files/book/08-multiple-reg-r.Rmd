@@ -1,1 +1,214 @@
-/Users/kamalsacranie/Downloads/st310/coursework/in-class/02-week/08-multiple-reg-r.Rmd
+## Multiple linear regression and pseudoinversion
+
+### Matrices and vectors in `R`
+
+Detailed in section \@ref(matrices-and-vectors)
+
+## Why does [pseudoinversion][pseudoinversion] work
+
+Let's understand how pseudoinversion works.  
+Let $\mathbf A^\dagger = (\mathbf A^T\mathbf A)^{-1} \mathbf A^T$, then
+
+\begin{align*}
+  \mathbf A^\dagger \mathbf A = (\mathbf A^T\mathbf A)^{-1} \mathbf A^T \mathbf
+  A = (\mathbf A^T\mathbf A)^{-1} (\mathbf A^T \mathbf A) = \mathbf I
+\end{align*}
+
+## Least-squares solutions in matrix notation
+
+We can write a $p = n$^[Any number of parameter variables] regression using
+matrix notation as follows:
+
+\begin{align}
+  \hat {\mathbf \beta} = (\mathbf X^T\mathbf X)^{-1}\mathbf X^T \mathbf y =
+  \mathbf X^\dagger \mathbf y (\#eq:matrix-multi-reg)
+\end{align}
+
+\@ref(eq:matrix-multi-reg) is a general formula which will work as long as
+$\mathbf{X}^{T}\mathbf{X}$ is invertable^[I.e. the **columns of X have full
+rank** (because the columns are our predictor variables) i.e. you can do a full
+gauss reduction?]. Our matrices often are invertible if $n>p$^[observations are
+greater than the number of variables].
+
+## Linear algebra and geometric intuition
+
+Okay so we have our model in matrix notation. Now we can get the predictions
+form the linear model by
+
+\begin{align*}
+  \hat{\mathbf y} = \mathbf {X} \hat{\mathbf \beta} = \mathbf X (\mathbf
+  X^T\mathbf X)^{-1}\mathbf X^T \mathbf y = \mathbf H \mathbf{y}
+\end{align*}
+
+if we define
+
+\begin{align*}
+  \mathbf H = \mathbf X (\mathbf X^T\mathbf X)^{-1}\mathbf X^T
+\end{align*}
+
+- We multiply the estimated betas by the observations of **X**
+- The $\mathbf{H}$ matrix is called the "hat" matrix
+
+$\mathbf{H}$ is also a projection matrix. If you square it, nothing happens:
+$\mathbf{H}^{2} = \mathbf{H}$. When you have a projection matrix like this. The
+matrix is the projection onto the column space of $\mathbf{X}$:
+
+- For any $n$-vector **v**, th $n$-vector $\mathbf{Hv}$ is the *orthogonal
+  projection of* **v** onto the column space of $\mathbf{X}$
+- Because it is an orthogonal projection we implicitly minimise the least
+  squares. I.e. among all the vectors you can form using the predictor
+  varaibles, the orthogonal projection of vector $\mathbf{y}$ onto the
+  columnspace of $\mathbf{X}$ gives us the plane which is closest to the
+  actual result varaible
+
+Question: why does the hat matrix project orthogonally
+
+### The matrix loss function
+
+We thus have the loss function
+
+\begin{align*}
+  L(\mathbf X, \mathbf y, \mathbf \beta) = (\mathbf y - \mathbf X
+  \beta)^T(\mathbf y - \mathbf X \beta)
+\end{align*}
+
+(just a different way of writing sum of squared errors)
+
+- Consider each coordinate separately and take univariate partial derivatives
+- Use vector calculus and compute the gradient
+- (Or even use matrix calculus identities)
+
+Reach the same conclusion: at a stationary point of $L$,
+
+\begin{align*}
+\mathbf X^T \mathbf X \hat \beta = \mathbf X^T \mathbf y
+\end{align*}
+
+## Categorical predictors
+
+Let's take the case where we have a categorical variable as a predictor. First
+we create a distribution of observations from a sample and then create a factor
+aout of them:
+
+```{r, eval=T}
+x <- as.factor(
+  sample(
+    c("A", "B", "C"),
+    size = 10,
+    replace = T
+  )
+)
+```
+
+- `sample` takes a vector of values we wish to choose/sample from, `size` is
+  how large we want our sample and then `replace` specifies with our without
+  replacement
+- The `factor` function creates a categorical variable with our sample
+
+`R` has a function called `model.matrix` which displays your model in matrix
+from when you pass through a `~` formula:
+
+```{r, eval=T}
+print(model.matrix(~x))
+X <- model.matrix(~ x - 1)
+```
+
+- Reminder: you only need to code $n - 1$ of the values in your categorical
+  variable because the last one is implicit. In this case `A` is implicit and
+  when the value is `B` or `C`, then it uses that intercept plus the offset of
+  the variable
+- The `- 1` in our formula means that we omit the intercept and code `A`
+  instead
+
+**Computing the hat matrix**:
+
+```{r, eval=T}
+# timxing X by its inverse (pseudo) to get the identity mat
+Xinv <- X %*% ginv(X)
+head(round(Xinv, 2))
+```
+
+To see how this matrix gives us predictions, let's look at which indexes
+of our list of A, B, C `x` contained the letter C:
+
+```{r, eval=T}
+cat_positions <- which(x == "C")
+cat_positions
+```
+
+These tells us what rows had C in matrix `X`. Nothing the output, let's look at
+the corresponding columns to the output numbers. We note that the corresponding
+columns are all the same:
+
+```{r, eval=T}
+Xinv[, cat_positions]
+```
+
+We notes that these columns are all the same. Furthermore, we note that C
+appears `r length(cat_positions)` and the decimals present in the columns which
+correspond to the rows who are the probability that a C will be in that
+position. So what this matrix does to give predictions is that it gives the
+within-group averages of the outcome variable. So *if we had the outcome vector
+$\mathbf{y}$*, the **prediction for some $y$** that corresponds an observation
+where the categorical variable's value is C, that prediction will be the
+average $y$ among the rows of data that had the value of C.
+
+## Interoperating coefficients of a regression
+
+Because we have more variables, we can plot pairs of variables (residuals?)
+together (similar to looking at the correlation matrix for all the variables)
+which may reveal a higher dimensional relationship in the residuals (bias).
+
+What people really want when inerpreting coefficients is:
+
+1. Our regression model is a conditional expectation model (given $x$ what is
+   $y$). People want interpreting coefficients to be as simple as taking the
+   partial derivative of that predictor variable^[I.e. what is the impact
+   ceterus paribus]:
+   \begin{align*}
+     \frac{\partial}{\partial x_j} \mathbb E[\mathbf y | \mathbf X] = \beta_j
+     \approx \hat \beta_j
+   \end{align*}
+   When you partially differential a linear regression you are only left with
+   one $\beta$ term
+2. People want to believe that if you could feasibly change the variable
+   associated with $\beta_{j}$ ($x_{j}$) then there would be a corresponding
+   change in $y$ of $\beta_{j}$ units (i.e. a causal relationship)
+
+Both of these desires can lead to serious incorrectness in our model. There
+could be **relationships between predictors**^[i.e. predictors that covary].
+There are also likely to be important variables which are not even in our
+model.
+
+::: {.example #non-linear-violation name="Breaking the assumption of nonlinearity"}
+<br />\hfill\break
+Suppose there is one predictor variable $x$, and a non-linear model fits the
+CEF^[Conditional expectation function]:
+
+\begin{align*}
+  \mathbb E[\mathbf y |X = x] = \beta_0 + \beta_1 x + \beta_2 x^2
+\end{align*}
+
+We don't know the $\beta$'s but we have some data, and we use multiple linear
+regression to fit the coefficients:
+
+```{r eval = FALSE}
+x2 <- x^2
+lm(y ~ x + x2)
+```
+
+But, there's a **problem**:
+
+\begin{equation}
+  \frac{\partial}{\partial x} \mathbb E[\mathbf y | x] = \beta_1 + 2\beta_2 x
+  \neq \beta_1 \approx \hat \beta_1
+\end{equation}
+
+- I.e. we cant tale the partial derivate because the 2nd term will still depend
+  on $x$. This can be somewhat solved in simple scenarios where it's easy to
+  see what other terms are dependent on $x$ by **only using the partial
+  locally** (almost like you would with a Taylor approximation)
+
+:::
+
+---

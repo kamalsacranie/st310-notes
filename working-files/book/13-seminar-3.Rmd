@@ -1,1 +1,223 @@
-/Users/kamalsacranie/Downloads/st310/coursework/in-class/03-week/13-seminar-3.Rmd
+# Seminar 3
+
+```{r, include=F}
+library(tidyverse)
+library(broom)
+library(modeldata)
+```
+
+> Reminder: supervised learning is when the relationship that the algorithm is
+> trying to find is "supervised" by the outcome variable; i.e. dictated by a
+> chosen outcome variable
+
+Classification is one of the most common supervised machine learning
+techniques.
+
+We will be working with the dataset `"attrition"` from the `modeldata` library.
+To load our `"attrition"` data into the global `R` environment, we just need to
+pass the `"attrition"` string to the `data` function which looks for a dataset
+of the same name in the path and loads it into the global space and we can
+access it as a variable.
+
+```{r, eval=T}
+data("attrition")
+```
+
+## Categorical outcome data
+
+Let's look at the head of our data to understand what we are dealing with:
+
+```{r, eval=T}
+head(attrition, 3) %>%
+  knitr::kable(booktabs = T) %>%
+  kableExtra::kable_styling(
+    latex_options = c("striped", "hold_position"), font_size = 8,
+  )
+```
+
+In this dataset, we have the binary outcome of `Attrition`. Let's see if we can
+predict the outcome using logistic regression.
+
+First let's do some exploratory plotting! Let's compare the distribution of a
+numeric predictor variable between the two outcome classes.
+
+```{r attrition-pred-bp, eval=T}
+#| fig.cap='Predictor vs Attrition boxplot',
+#| out.height="30%",
+#| fig.align="center",
+# Because we are doing a boxplot, it doesn't matter what axis our outcome
+# variable is on
+ggplot(attrition, aes(y = DistanceFromHome, x = Attrition)) +
+  geom_boxplot()
+```
+
+- Figure \@ref(fig:attrition-pred-bp) shows us the distribution of the
+  predictor variable in the binary grouping of attrition "yes" and "no"
+
+> The more different these boxplots are, the better logistic regression is
+> going to work because there is a clearer divide between the two groups as
+> they have different means and quantiles.
+
+### Class imbalance
+
+An issue that we often run into in classification is the issue of **class
+balance**^[Classes being the different outcomes of your categorical outcome
+variable]. If 99% of your sample are classified in one class, you could have a
+very simple rule and be correct 99% of the time. On the other hand, if you have
+a 50/50 split, you are tasked with the hardest case of classification because
+your model needs to have predictor variables that are unique to either side.
+Let's see how balanced our classes are:
+
+```{r, eval=T}
+attrition %>% count(Attrition)
+```
+
+The answer is not very. Our classes are not very balanced. One way we can
+**help fix this imbalance** is by taking a subsample of the data. We can either
+take away observations from the oversubscribed class. Another approach is to
+sample your smaller class **with replacement**.  
+In both of these approaches, we make our training data look like something very
+different from the real world. We will revisit this point after we fit the
+model...
+
+> We may not want to upsample because we are basically creating fake data
+> (sampling with replacement). This may make downsampling more preferable. If
+> you only care about prediction you can do either one but if you care about
+> causality then you should downsample
+
+### Downsampling
+
+Let's downsample our dataset by taking a random sample from our larger class
+which is the size of our smaller class by using the `slice_sample(n)` function.
+This will give us an equal size sample between each class. First let's do this
+explicitly:
+
+```{r, eval=T}
+min_class <- min(table(attrition$Attrition))
+attr_no <- attrition %>%
+  # Filtering for just the on attritioned because the no group is the larger
+  # one
+  filter(Attrition == "No") %>%
+  # randomly sampling our dataset to get a size 237 sample because that's the
+  # size of the smaller group
+  slice_sample(n = min_class)
+attr_yes <- filter(attrition, Attrition == "Yes")
+attr_donwsample <- rbind(attr_no, attr_yes)
+```
+
+- `filter` boolean indexes the rows only with `Attrition` column equal to the
+  string `"No"`
+- We then use the `rbind()` function to bind the rows of the yes and noes^[When
+  using `rbind` the datasets mus have the same columns]
+
+This can be done quicker by using `group_by()`:
+
+```{r, eval=T}
+attr_balanced <- group_by(attrition, Attrition) %>%
+  slice_sample(n = min_class)
+```
+
+- `slice_sample` has a neat feature where if you use `group_by`, the slice will
+  be performed on each group. Hence, in this scenario, we perform a sampling of
+  237 on each group
+
+## Logistic regression
+
+Use `glm(..., family = "binomial")`^[GLM stands for generalised linear models.
+We use the binomial probability distribution because we are only choosing from
+a binary with logistic regression]
+to **fit a logistic regression**:
+
+
+```{r, eval=T}
+# This is a powerful function for when youre outcome varaible is not binary but
+# perhaps it is a count
+attr_glm <- glm(
+  Attrition ~ DistanceFromHome,
+  # Remember we have to fit the model to our balanced data in order for it to
+  # predict well
+  data = attr_balanced,
+  family = "binomial"
+)
+summary(attr_glm)
+```
+
+There are two important things we must note when using generalised linear
+models:
+
+- In GLMs, we try to *emphasises that residuals are different in this case* by
+  referring to them as **deviance residuals** to remember that we can't
+  interpret the residuals in GLMs like we to for regular linear models
+- The **coefficients** in a GLM are a bit more difficult to interpret This is
+  because the coefficient represents the change in the **log odds**. This is
+  quite difficult to interpret so we might often want to reverse the log of the
+  coefficient by exponentiating them as we do below
+
+```{r}
+exp(coef(attr_glm))
+```
+
+- This allows us to see how the regular odds change when interpreting the
+  coefficients
+
+## Getting predictions from our model
+
+We can use the `predict()` function to use or fitted GLM to predict values for
+us:
+
+```{r}
+predict(attr_glm, type = "response")
+```
+
+- Setting `type = "response"` it throws out predictions on the probability
+  scale. So the probability of attrition for each value.
+
+> Another day of getting the predictions is using the `augment()` function from
+> `broom`. You would use `augment(model, type.response = "response")` which
+> adds a predicted column.
+
+Crucially, however, these are still continuous numeric values rather than a
+discreet classification. Let us now find where we should "draw our line" for
+the rounding. Our threshold of course does not have to be 0.5. We may want to
+use a different threshold depending on the costs of false positive compared to
+false negatives.
+
+## Writing functions to execute simulations
+
+We want to createa a function which effectively **generates data** and takes a
+sample size as an input. Let's create a linear function with Gaussian noise:
+
+```{r, eval=T}
+my_dgp <- function(n) {
+  # Generate our x values
+  x <- runif(n)
+  # Generate our y values with noise
+  y <- 1 - 2 * x + rnorm(n)
+  return(data.frame(x = x, y = y))
+}
+```
+
+- This function gives a dataset which is MATHEMATICALLY TRUE for. This allows
+  us to not worry about whether our data is representative.
+
+> In `R`, we can generate random numbers from any distribution. The functions
+> which do this are all named in a similar convention. They start with the
+> letter "r" which is succeeded by the name of the distribution. For example,
+> to generate a random uniform distribution, we would use `runif(...)` and for
+> a random poisson we would use `rpois()`
+
+We can now use our random generator to fit a linear model on a randomly
+generated dataset:
+
+```{r}
+lm(y ~ x, data = my_dgp(20))
+```
+
+### Using function generator with the `replicate` function
+
+The `replicate()` function allows us to take a function and run it repeatedly
+any number of times:
+
+```{r, eval=T}
+replicate(5, coef(lm(y ~ x, data = my_dgp(20)))[2])
+```

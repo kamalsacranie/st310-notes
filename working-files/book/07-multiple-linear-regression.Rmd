@@ -95,9 +95,9 @@ mean (where the regression line passes through) is 0 so there is no intercept]:
 
 or:
 
-\begin{align*}
-\mathbf{y} = \mathbf{X} \beta + \mathbf{\varepsilon}
-\end{align*}
+\begin{align}
+\mathbf{y} = \mathbf{X} \beta + \varepsilon (\#eq:mat-lin-reg)
+\end{align}
 
 ### Other notational conventions
 
